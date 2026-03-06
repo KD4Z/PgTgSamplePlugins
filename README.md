@@ -2,6 +2,8 @@
 
 Reference implementations for developing third-party plugins for the PgTg amplifier/tuner emulator service. Each project demonstrates a complete, working plugin using the `MyModel/Internal` architecture pattern.
 
+Note: The $commands coded in each example are fictitious.  You will need to translate the polling/parsing command pattern into whatever your actual hardware requires!
+
 ## Projects
 
 ### SampleAmp — Amplifier-Only Plugin
@@ -110,10 +112,21 @@ MyModel/
 
 ## Building
 
-Each project references the main `PgTg` project (two levels up):
+Each project references three assemblies in the deployment folder for  `PgTgBridge`
+You will need PgTgBridge installed on your devlopment workstation in order to resolve these references.
 
 ```xml
-<ProjectReference Include="..\..\PgTg\PgTg.csproj" />
+<ItemGroup>
+    <Reference Include="PgTg">
+      <HintPath>C:\Program Files\PgTgBridge\bin\PgTg.dll</HintPath>
+    </Reference>
+    <Reference Include="PgTg.Common">
+      <HintPath>C:\Program Files\PgTgBridge\bin\PgTg.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="PgTg.Helpers">
+      <HintPath>C:\Program Files\PgTgBridge\bin\PgTg.Helpers.dll</HintPath>
+    </Reference>
+  </ItemGroup>
 ```
 
 Build from the individual project directory:
@@ -124,7 +137,7 @@ dotnet build SampleTuner/SampleTuner.csproj
 dotnet build SampleAmpTuner/SampleAmpTuner.csproj
 ```
 
-The output DLL is the plugin assembly. Copy it to the PgTg plugins directory and register it in the service configuration.
+The output DLL is the plugin assembly. Copy it to the PgTg plugins directory and configure it in the PgTgController - Settings - Plugin Manager.
 
 ---
 
