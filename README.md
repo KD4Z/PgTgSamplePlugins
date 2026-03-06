@@ -1,6 +1,6 @@
 # PgTgSamplePlugins
 
-Reference implementations for developing third-party plugins for the PgTg amplifier/tuner emulator service. Each project demonstrates a complete, working plugin using the `MyModel/Internal` architecture pattern.
+Reference implementations for developing third-party plugins for the PgTgBridge amplifier/tuner service. Each project demonstrates a complete, working plugin using the `MyModel/Internal` architecture pattern.
 
 Note: The $commands coded in each example are fictitious.  You will need to translate the polling/parsing command pattern into whatever your actual hardware requires!
 
@@ -11,7 +11,7 @@ Note: The $commands coded in each example are fictitious.  You will need to tran
 **Plugin ID:** `sample.amplifier`
 **Interface:** `IAmplifierPlugin`
 **Capability:** `PluginCapability.Amplifier`
-**Device ID:** `SAMP500`
+**Device ID:** `SAMP1500`
 **Max Meter Power:** 1500 W
 
 Demonstrates how to implement a standalone amplifier plugin. Features:
@@ -35,7 +35,7 @@ Example: `$PWR 500 12;` (500 W forward, SWR 1.2)
 **Plugin ID:** `sample.tuner`
 **Interface:** `ITunerPlugin`
 **Capability:** `PluginCapability.Tuner`
-**Device ID:** `SAMP-T`
+**Device ID:** `SAMPTUN`
 **Max Meter Power:** 600 W
 
 Demonstrates how to implement a standalone antenna tuner plugin. Also demonstrates the **alternate startup path** where device initialization is disabled (`DeviceInitializationEnabled = false`) — the plugin connects and begins polling without waiting for an identity handshake.
@@ -62,7 +62,7 @@ Features:
 **Plugin ID:** `sample.amplifier-tuner`
 **Interface:** `IAmplifierTunerPlugin`
 **Capability:** `PluginCapability.AmplifierAndTuner`
-**Device ID:** `SAMP1500`
+**Device ID:** `SAMPCOMBO`
 **Max Meter Power:** 1500 W
 
 Demonstrates a single plugin that implements **both** `IAmplifierPlugin` and `ITunerPlugin` for devices that integrate an amplifier and tuner in one unit. A single shared connection manages both subsystems.
@@ -113,7 +113,7 @@ MyModel/
 ## Building
 
 Each project references three assemblies in the deployment folder for  `PgTgBridge`
-You will need PgTgBridge installed on your devlopment workstation in order to resolve these references.
+You will need PgTgBridge installed on your development workstation in order to resolve these references.
 
 ```xml
 <ItemGroup>
