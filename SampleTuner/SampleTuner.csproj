@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.IO.Ports" Version="10.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="PgTg">
+      <HintPath>C:\Program Files\PgTgBridge\bin\PgTg.dll</HintPath>
+    </Reference>
+    <Reference Include="PgTg.Common">
+      <HintPath>C:\Program Files\PgTgBridge\bin\PgTg.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="PgTg.Helpers">
+      <HintPath>C:\Program Files\PgTgBridge\bin\PgTg.Helpers.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>
