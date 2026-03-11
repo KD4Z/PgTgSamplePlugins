@@ -20,7 +20,25 @@ namespace SampleAmp.MyModel
         Version = "1.0.0",
         Manufacturer = "KD4Z",
         Capability = PluginCapability.Gpio,
-        Description = "Sample Gpio plugin for PgTgBridge that sends current frequency and mode to an external radio acting as an air monitor.")]
+        Description = "Sample Gpio plugin for PgTgBridge that sends current frequency and mode to an external radio acting as an air monitor.",
+        // UiSections declares which control groups PluginManagerForm will display
+        // for this plugin when it is selected. Combine flags to enable multiple sections.
+        //
+        // Available sections:
+        //   PluginUiSection.Tcp          - TCP radio button, IP address, port number
+        //   PluginUiSection.Serial       - Serial radio button, COM port dropdown
+        //   PluginUiSection.Reconnect    - Reconnect delay entry (shown with Tcp or Serial)
+        //   PluginUiSection.Wol          - Wake-on-LAN checkbox, MAC address, Test button
+        //   PluginUiSection.TcpMultiplex - TCP Multiplex Server enable + listen port
+        //   PluginUiSection.GpioAction   - GPIO output action mapping grid
+        //   PluginUiSection.Protocol     - CAT / CI-V frequency mode protocol selector
+        //
+        // Example — TCP + Serial + reconnect (most amplifier/tuner plugins):
+        //   UiSections = PluginUiSection.Tcp | PluginUiSection.Serial | PluginUiSection.Reconnect
+        //
+        // Example — TCP only, with Wake-on-LAN:
+        //   UiSections = PluginUiSection.Tcp | PluginUiSection.Reconnect | PluginUiSection.Wol
+        UiSections = PluginUiSection.Tcp | PluginUiSection.Serial | PluginUiSection.Reconnect | PluginUiSection.Protocol)]
     public class SampleAmpPlugin : IAmplifierPlugin
     {
         public const string PluginId = "sample.airmonitor";
@@ -49,7 +67,8 @@ namespace SampleAmp.MyModel
             Manufacturer = "KD4Z",
             Capability = PluginCapability.Gpio,
             Description = "Sample Gpio plugin for third-party development reference",
-            ConfigurationType = typeof(SampleAmpConfiguration)
+            ConfigurationType = typeof(SampleAmpConfiguration),
+            UiSections = PluginUiSection.Tcp | PluginUiSection.Serial | PluginUiSection.Reconnect | PluginUiSection.Protocol
         };
 
         public PluginConnectionState ConnectionState => _connection?.ConnectionState ?? PluginConnectionState.Disconnected;
