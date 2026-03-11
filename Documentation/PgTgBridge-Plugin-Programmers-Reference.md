@@ -210,6 +210,65 @@ public enum PluginCapability
 
 ---
 
+## Declaring UI Requirements (`UiSections`)
+
+### Purpose
+
+`PluginManagerForm` shows different groups of controls depending on what a plugin needs (TCP fields, serial port selector, Wake-on-LAN, GPIO mapping grid, etc.). Previously, the form hard-coded these decisions per plugin ID. Now every plugin declares what it needs and the form becomes a data-driven renderer — adding a new plugin requires **zero changes** to the form.
+
+### The `PluginUiSection` Enum
+
+| Flag | Controls shown | Use when |
+|------|---------------|----------|
+| `Tcp` | TCP radio button, IP address, port | Plugin connects via TCP |
+| `Serial` | Serial radio button, COM port dropdown | Plugin supports serial |
+| `Reconnect` | Reconnect delay field | Plugin auto-reconnects (pair with `Tcp` or `Serial`) |
+| `Wol` | Wake-on-LAN checkbox, MAC address, Test button | Plugin can wake device via WOL (TCP only) |
+| `TcpMultiplex` | TCP Multiplex Server enable + listen port | Plugin exposes a TCP multiplexer |
+| `GpioAction` | GPIO output action mapping grid | Plugin controls GPIO pins |
+| `Protocol` | CAT / CI-V frequency mode selector | Plugin uses radio frequency/mode data |
+
+Flags are bitwise — combine with `|` to enable multiple sections.
+
+### How to Declare
+
+Set `UiSections` in **both** your `[PluginInfo]` attribute and your `Info` property initializer:
+
+```csharp
+[PluginInfo("mycompany.mydevice", "My Device",
+    Version = "1.0.0",
+    Manufacturer = "My Company",
+    Capability = PluginCapability.Amplifier,
+    Description = "My amplifier plugin",
+    UiSections = PluginUiSection.Tcp | PluginUiSection.Serial | PluginUiSection.Reconnect)]
+public class MyDevicePlugin : IAmplifierPlugin
+{
+    public PluginInfo Info { get; } = new PluginInfo
+    {
+        Id = "mycompany.mydevice",
+        // ...
+        UiSections = PluginUiSection.Tcp | PluginUiSection.Serial | PluginUiSection.Reconnect
+    };
+}
+```
+
+### Combination Examples
+
+| Scenario | UiSections |
+|----------|-----------|
+| TCP-only amplifier (e.g., KPA1500) | `Tcp \| Reconnect \| Wol \| TcpMultiplex \| Protocol` |
+| TCP+Serial amplifier/tuner (e.g., KPA500, KAT500) | `Tcp \| Serial \| Reconnect` |
+| GPIO output controller (e.g., PiGpio) | `Tcp \| Reconnect \| GpioAction` |
+| Frequency monitor with protocol selector (e.g., AirMonitor) | `Tcp \| Serial \| Reconnect \| Protocol` |
+
+### Backward Compatibility
+
+If a plugin does **not** declare `UiSections` (i.e., leaves it at the default `PluginUiSection.None`), `PluginManagerForm` falls back to deriving visibility from the legacy `TcpSupported` / `SerialSupported` / `WolSupported` flags and the `Capability` bits. This ensures older external plugins continue to work without modification.
+
+> **Best practice:** Always declare `UiSections` explicitly. The fallback path exists only for pre-existing plugins that have not yet been updated.
+
+---
+
 ## Plugin Lifecycle
 
 ### 1. Discovery

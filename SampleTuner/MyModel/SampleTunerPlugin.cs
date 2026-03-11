@@ -21,7 +21,25 @@ namespace SampleTuner.MyModel
         Version = "1.0.0",
         Manufacturer = "Sample Manufacturer",
         Capability = PluginCapability.Tuner,
-        Description = "Sample tuner plugin for third-party development reference")]
+        Description = "Sample tuner plugin for third-party development reference",
+        // UiSections declares which control groups PluginManagerForm will display
+        // for this plugin when it is selected. Combine flags to enable multiple sections.
+        //
+        // Available sections:
+        //   PluginUiSection.Tcp          - TCP radio button, IP address, port number
+        //   PluginUiSection.Serial       - Serial radio button, COM port dropdown
+        //   PluginUiSection.Reconnect    - Reconnect delay entry (shown with Tcp or Serial)
+        //   PluginUiSection.Wol          - Wake-on-LAN checkbox, MAC address, Test button
+        //   PluginUiSection.TcpMultiplex - TCP Multiplex Server enable + listen port
+        //   PluginUiSection.GpioAction   - GPIO output action mapping grid
+        //   PluginUiSection.Protocol     - CAT / CI-V frequency mode protocol selector
+        //
+        // Example — TCP + Serial + reconnect (most amplifier/tuner plugins):
+        //   UiSections = PluginUiSection.Tcp | PluginUiSection.Serial | PluginUiSection.Reconnect
+        //
+        // Example — TCP only, with Wake-on-LAN:
+        //   UiSections = PluginUiSection.Tcp | PluginUiSection.Reconnect | PluginUiSection.Wol
+        UiSections = PluginUiSection.Tcp | PluginUiSection.Serial | PluginUiSection.Reconnect)]
     public class SampleTunerPlugin : ITunerPlugin
     {
         public const string PluginId = "sample.tuner";
@@ -49,7 +67,8 @@ namespace SampleTuner.MyModel
             Manufacturer = "Sample Manufacturer",
             Capability = PluginCapability.Tuner,
             Description = "Sample tuner plugin for third-party development reference",
-            ConfigurationType = typeof(SampleTunerConfiguration)
+            ConfigurationType = typeof(SampleTunerConfiguration),
+            UiSections = PluginUiSection.Tcp | PluginUiSection.Serial | PluginUiSection.Reconnect
         };
 
         public PluginConnectionState ConnectionState => _connection?.ConnectionState ?? PluginConnectionState.Disconnected;
