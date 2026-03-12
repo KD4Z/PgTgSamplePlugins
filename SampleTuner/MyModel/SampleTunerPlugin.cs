@@ -273,6 +273,11 @@ namespace SampleTuner.MyModel
             }
         }
 
+        public void SetTransmitMode(string mode)
+        {
+            // Notify the plugin of the radio's current transmit mode (e.g. "USB", "CW", "AM").
+        }
+
         #endregion
 
         #region Event Handlers

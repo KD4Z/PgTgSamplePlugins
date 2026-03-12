@@ -40,7 +40,7 @@ namespace SampleAirMonitor.MyModel
         //
         // Example — GPIO with action mapping:
         //   UiSections = PluginUiSection.Tcp | PluginUiSection.Serial | PluginUiSection.Reconnect | PluginUiSection.GpioAction
-        UiSections = PluginUiSection.Tcp | PluginUiSection.Serial | PluginUiSection.Reconnect | PluginUiSection.GpioAction)]
+        UiSections = PluginUiSection.Tcp | PluginUiSection.Serial | PluginUiSection.Reconnect | PluginUiSection.Protocol)]
     public class SampleAirMonitorPlugin : IGpioOutputPlugin
     {
         public const string PluginId = "sample.airmonitor";
@@ -263,6 +263,16 @@ namespace SampleAirMonitor.MyModel
             _statusTracker.SetTunerTuning(tuning);
             _commandQueue.SendCommand(tuning ? Constants.TunerTuneStartCmd : Constants.TunerTuneStopCmd);
             Logger.LogVerbose(ModuleName, $"SetTunerTune({tuning})");
+        }
+
+        public void SetFrequencyKhz(int frequencyKhz)
+        {
+            // Notify the plugin of the radio's current transmit  frequency in kHz (e.g. 7203).
+        }
+
+        public void SetTransmitMode(string mode)
+        {
+            // Notify the plugin of the radio's current transmit mode (e.g. "USB", "CW", "AM").
         }
 
         #endregion
