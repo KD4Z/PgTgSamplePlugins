@@ -7,9 +7,9 @@ using PgTg.Plugins.Core;
 namespace SampleTuner.MyModel.Internal
 {
     /// <summary>
-    /// Interface for device connection implementations (TCP or Serial).
+    /// Interface for SampleTuner connection implementations (TCP or Serial).
     /// </summary>
-    internal interface IConnection : IDisposable
+    internal interface ISampleTunerConnection : IDisposable
     {
         /// <summary>
         /// Raised when data is received from the device.

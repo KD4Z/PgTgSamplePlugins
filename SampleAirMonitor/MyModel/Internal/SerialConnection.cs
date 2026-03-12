@@ -9,13 +9,13 @@ using System.Threading.Tasks;
 using PgTg.Common;
 using PgTg.Plugins.Core;
 
-namespace SampleAmp.MyModel.Internal
+namespace SampleAirMonitor.MyModel.Internal
 {
     /// <summary>
-    /// Manages serial port connection to the sample amplifier device.
+    /// Manages serial port connection to the air monitor GPIO controller device.
     /// Handles connect, reconnect, disconnect, and event-driven data receive.
     /// </summary>
-    internal class SerialConnection : IConnection
+    internal class SerialConnection : ISampleAirMonitorConnection
     {
         private const string ModuleName = "SerialConnection";
 

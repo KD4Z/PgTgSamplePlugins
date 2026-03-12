@@ -15,7 +15,7 @@ namespace SampleTuner.MyModel.Internal
     /// Manages TCP connection to the sample tuner device.
     /// Handles connect, reconnect, disconnect, and async data receive.
     /// </summary>
-    internal class TcpConnection : IConnection
+    internal class TcpConnection : ISampleTunerConnection
     {
         private const string ModuleName = "TcpConnection";
 

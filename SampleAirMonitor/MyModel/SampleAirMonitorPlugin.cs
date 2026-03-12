@@ -3,24 +3,26 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using PgTg.AMP;
 using PgTg.Common;
 using PgTg.Plugins;
 using PgTg.Plugins.Core;
-using SampleAmp.MyModel.Internal;
+using SampleAirMonitor.MyModel.Internal;
 
-namespace SampleAmp.MyModel
+namespace SampleAirMonitor.MyModel
 {
     /// <summary>
-    /// Sample amplifier plugin demonstrating IAmplifierPlugin implementation.
+    /// Sample GPIO output plugin demonstrating IGpioOutputPlugin implementation.
     /// Uses the MyModel/Internal architecture pattern with separated concerns:
     /// IConnection (TCP or Serial), CommandQueue, ResponseParser, StatusTracker, Constants.
+    ///
+    /// Unlike amplifier/tuner plugins, this GPIO plugin has no polling — it only
+    /// sends output commands when the Bridge calls SetAmpPtt, SetAmpOperateMode, etc.
     /// </summary>
     [PluginInfo("sample.airmonitor", "Air Monitor",
         Version = "1.0.0",
         Manufacturer = "KD4Z",
         Capability = PluginCapability.Gpio,
-        Description = "Sample Gpio plugin for PgTgBridge that sends current frequency and mode to an external radio acting as an air monitor.",
+        Description = "Sample GPIO output plugin for third-party development reference",
         // UiSections declares which control groups PluginManagerForm will display
         // for this plugin when it is selected. Combine flags to enable multiple sections.
         //
@@ -36,24 +38,23 @@ namespace SampleAmp.MyModel
         // Example — TCP + Serial + reconnect (most amplifier/tuner plugins):
         //   UiSections = PluginUiSection.Tcp | PluginUiSection.Serial | PluginUiSection.Reconnect
         //
-        // Example — TCP only, with Wake-on-LAN:
-        //   UiSections = PluginUiSection.Tcp | PluginUiSection.Reconnect | PluginUiSection.Wol
-        UiSections = PluginUiSection.Tcp | PluginUiSection.Serial | PluginUiSection.Reconnect | PluginUiSection.Protocol)]
-    public class SampleAmpPlugin : IAmplifierPlugin
+        // Example — GPIO with action mapping:
+        //   UiSections = PluginUiSection.Tcp | PluginUiSection.Serial | PluginUiSection.Reconnect | PluginUiSection.GpioAction
+        UiSections = PluginUiSection.Tcp | PluginUiSection.Serial | PluginUiSection.Reconnect | PluginUiSection.GpioAction)]
+    public class SampleAirMonitorPlugin : IGpioOutputPlugin
     {
         public const string PluginId = "sample.airmonitor";
-        private const string ModuleName = "SampleAirMonitor";
+        private const string ModuleName = "SampleAirMonitorPlugin";
 
         private readonly CancellationToken _cancellationToken;
 
         // Internal components
-        private IConnection? _connection;
+        private ISampleAirMonitorConnection? _connection;
         private CommandQueue? _commandQueue;
         private ResponseParser? _parser;
         private StatusTracker? _statusTracker;
-        private SampleAmpConfiguration? _config;
+        private SampleAirMonitorConfiguration? _config;
 
-        private bool _radioConnected;
         private bool _stopped;
         private bool _disposed;
 
@@ -62,13 +63,13 @@ namespace SampleAmp.MyModel
         public PluginInfo Info { get; } = new PluginInfo
         {
             Id = PluginId,
-            Name = "Sample Air Monitor",
+            Name = "Air Monitor",
             Version = "1.0.0",
             Manufacturer = "KD4Z",
             Capability = PluginCapability.Gpio,
-            Description = "Sample Gpio plugin for third-party development reference",
-            ConfigurationType = typeof(SampleAmpConfiguration),
-            UiSections = PluginUiSection.Tcp | PluginUiSection.Serial | PluginUiSection.Reconnect | PluginUiSection.Protocol
+            Description = "Sample GPIO output plugin for third-party development reference",
+            ConfigurationType = typeof(SampleAirMonitorConfiguration),
+            UiSections = PluginUiSection.Tcp | PluginUiSection.Serial | PluginUiSection.Reconnect | PluginUiSection.GpioAction
         };
 
         public PluginConnectionState ConnectionState => _connection?.ConnectionState ?? PluginConnectionState.Disconnected;
@@ -80,13 +81,7 @@ namespace SampleAmp.MyModel
 
         #endregion
 
-        #region IAmplifierPlugin
-
-        public event EventHandler<AmplifierStatusEventArgs>? StatusChanged;
-
-        #endregion
-
-        public SampleAmpPlugin(CancellationToken cancellationToken)
+        public SampleAirMonitorPlugin(CancellationToken cancellationToken)
         {
             _cancellationToken = cancellationToken;
         }
@@ -95,7 +90,7 @@ namespace SampleAmp.MyModel
 
         public Task InitializeAsync(IPluginConfiguration configuration, CancellationToken cancellationToken)
         {
-            _config = configuration as SampleAmpConfiguration ?? new SampleAmpConfiguration
+            _config = configuration as SampleAirMonitorConfiguration ?? new SampleAirMonitorConfiguration
             {
                 IpAddress = configuration.IpAddress,
                 Port = configuration.Port,
@@ -123,15 +118,9 @@ namespace SampleAmp.MyModel
             }
 
             // Create other components
-            _commandQueue = new CommandQueue(_connection, _cancellationToken);
+            _commandQueue = new CommandQueue(_connection);
             _parser = new ResponseParser();
             _statusTracker = new StatusTracker();
-
-            // Configure command queue
-            _commandQueue.Configure(
-                _config.PollingIntervalRxMs,
-                _config.PollingIntervalTxMs,
-                _config.PttWatchdogIntervalMs);
 
             // Wire up events
             _connection.DataReceived += OnDataReceived;
@@ -151,7 +140,6 @@ namespace SampleAmp.MyModel
                 return;
             }
 
-            // Start connection first (must be connected before sending init commands)
             await _connection.StartAsync();
 
             if (_cancellationToken.IsCancellationRequested)
@@ -161,8 +149,7 @@ namespace SampleAmp.MyModel
                 return;
             }
 
-            // Start command queue with device initialization (waits for device to respond)
-            await _commandQueue.StartAsync();
+            _commandQueue.Start();
 
             if (!_cancellationToken.IsCancellationRequested)
             {
@@ -176,14 +163,10 @@ namespace SampleAmp.MyModel
 
             Logger.LogInfo(ModuleName, "Stopping plugin");
 
-            // Zero meter values and send final update
-            _statusTracker?.ZeroMeterValues();
-            RaiseMeterDataEvent();
-
             // Stop command queue
             _commandQueue?.Stop();
 
-            // Unwire connection events before stopping
+            // Unwire connection events before stopping (CLAUDE.md teardown order)
             if (_connection != null)
             {
                 _connection.DataReceived -= OnDataReceived;
@@ -228,52 +211,58 @@ namespace SampleAmp.MyModel
 
         #endregion
 
-        #region IAmplifierPlugin Methods
+        #region IGpioOutputPlugin Methods
 
-        public AmplifierStatusData GetStatus()
+        /// <summary>
+        /// Called by the Bridge when the radio PTT state changes.
+        /// Sends the appropriate GPIO command to the remote device.
+        /// </summary>
+        public void SetAmpPtt(bool ptt)
         {
-            return _statusTracker?.GetAmplifierStatus() ?? new AmplifierStatusData();
+            if (_statusTracker == null || _commandQueue == null) return;
+
+            _statusTracker.SetAmpPtt(ptt);
+            _commandQueue.SendCommand(ptt ? Constants.AmpPttOnCmd : Constants.AmpPttOffCmd);
+            Logger.LogVerbose(ModuleName, $"SetAmpPtt({ptt})");
         }
 
-        public void SendPriorityCommand(AmpCommand command)
+        /// <summary>
+        /// Called by the Bridge when the amplifier operate/standby mode changes.
+        /// Sends the appropriate GPIO command to the remote device.
+        /// </summary>
+        public void SetAmpOperateMode(bool operate)
         {
-            if (_commandQueue == null || _statusTracker == null) return;
+            if (_statusTracker == null || _commandQueue == null) return;
 
-            _commandQueue.SendPriorityCommand(command, _statusTracker.AmpState);
+            _statusTracker.SetAmpOperate(operate);
+            _commandQueue.SendCommand(operate ? Constants.AmpOperateCmd : Constants.AmpStandbyCmd);
+            Logger.LogVerbose(ModuleName, $"SetAmpOperateMode({operate})");
         }
 
-        public void SetFrequencyKhz(int frequencyKhz)
+        /// <summary>
+        /// Called by the Bridge when the tuner inline/bypass state changes.
+        /// Sends the appropriate GPIO command to the remote device.
+        /// </summary>
+        public void SetTunerInline(bool inline)
         {
-            _commandQueue?.SetFrequencyKhz(frequencyKhz);
+            if (_statusTracker == null || _commandQueue == null) return;
+
+            _statusTracker.SetTunerInline(inline);
+            _commandQueue.SendCommand(inline ? Constants.TunerInlineCmd : Constants.TunerBypassCmd);
+            Logger.LogVerbose(ModuleName, $"SetTunerInline({inline})");
         }
 
-        public void SetRadioConnected(bool connected)
+        /// <summary>
+        /// Called by the Bridge when a tune cycle starts or stops.
+        /// Sends the appropriate GPIO command to the remote device.
+        /// </summary>
+        public void SetTunerTune(bool tuning)
         {
-            _radioConnected = connected;
+            if (_statusTracker == null || _commandQueue == null) return;
 
-            if (!connected && _commandQueue != null)
-            {
-                // Safety: force release PTT if radio disconnects
-                _commandQueue.ForceReleasesPtt();
-                Logger.LogVerbose(ModuleName, "Radio disconnected, forcing device to RX (Safety Measure)");
-            }
-        }
-
-        public void SetOperateMode(bool operate)
-        {
-            if (_commandQueue == null) return;
-
-            _commandQueue.SetOperateMode(operate);
-            Logger.LogVerbose(ModuleName, $"Setting amplifier to {(operate ? "OPERATE" : "STANDBY")} mode");
-        }
-
-        public void SetRadioPtt(bool isPtt)
-        {
-            if (_statusTracker != null && _statusTracker.SetRadioPtt(isPtt))
-            {
-                // RadioPtt changed - update command queue PTT state
-                _commandQueue?.OnPttStateChanged(isPtt);
-            }
+            _statusTracker.SetTunerTuning(tuning);
+            _commandQueue.SendCommand(tuning ? Constants.TunerTuneStartCmd : Constants.TunerTuneStopCmd);
+            Logger.LogVerbose(ModuleName, $"SetTunerTune({tuning})");
         }
 
         #endregion
@@ -282,44 +271,10 @@ namespace SampleAmp.MyModel
 
         private void OnDataReceived(string data)
         {
-            if (_parser == null || _statusTracker == null || _commandQueue == null) return;
+            if (_parser == null) return;
 
-            // Parse the response
-            var update = _parser.Parse(data, _statusTracker);
-
-            // Handle TX/RX acknowledgments
-            if (update.IsPtt.HasValue)
-            {
-                _commandQueue.OnTxRxResponseReceived(update.IsPtt.Value);
-            }
-
-            // Handle firmware version
-            if (update.FirmwareVersion.HasValue)
-            {
-                _commandQueue.SetFirmwareVersion(update.FirmwareVersion.Value);
-            }
-
-            // Apply to status tracker
-            bool hadAmpChange = update.AmpStateChanged || update.PttStateChanged || update.PttReady;
-
-            _statusTracker.ApplyUpdate(update);
-
-            // Update command queue PTT state
-            if (update.IsPtt.HasValue)
-            {
-                _commandQueue.OnPttStateChanged(update.IsPtt.Value);
-            }
-
-            // Raise events
-            if (hadAmpChange)
-            {
-                var ampStatus = _statusTracker.GetAmplifierStatus();
-                ampStatus.WhatChanged = DetermineAmpChange(update);
-                StatusChanged?.Invoke(this, new AmplifierStatusEventArgs(ampStatus, PluginId));
-            }
-
-            // Raise meter data event on every status update from the device
-            RaiseMeterDataEvent();
+            bool isAck = _parser.Parse(data);
+            Logger.LogVerbose(ModuleName, isAck ? $"ACK received: {data}" : $"Unexpected response: {data}");
         }
 
         private void OnConnectionStateChanged(PluginConnectionState state)
@@ -329,34 +284,12 @@ namespace SampleAmp.MyModel
 
             if (state == PluginConnectionState.Connected)
             {
-                Logger.LogInfo(ModuleName, "Connected to device");
+                Logger.LogInfo(ModuleName, "Connected to GPIO device");
             }
             else if (state == PluginConnectionState.Disconnected)
             {
-                Logger.LogInfo(ModuleName, "Disconnected from device");
+                Logger.LogInfo(ModuleName, "Disconnected from GPIO device");
             }
-        }
-
-        private void RaiseMeterDataEvent()
-        {
-            if (_statusTracker == null) return;
-
-            var readings = _statusTracker.GetMeterReadings();
-            bool isTransmitting = _statusTracker.IsPtt || _statusTracker.RadioPtt;
-            var args = new MeterDataEventArgs(readings, isTransmitting, PluginId);
-            MeterDataAvailable?.Invoke(this, args);
-        }
-
-        #endregion
-
-        #region Helpers
-
-        private AmplifierStatusChange DetermineAmpChange(ResponseParser.StatusUpdate update)
-        {
-            if (update.PttReady) return AmplifierStatusChange.PttReady;
-            if (update.PttStateChanged) return AmplifierStatusChange.PttStateChanged;
-            if (update.AmpStateChanged) return AmplifierStatusChange.OperateStateChanged;
-            return AmplifierStatusChange.General;
         }
 
         #endregion

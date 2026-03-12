@@ -18,7 +18,7 @@ namespace SampleTuner.MyModel.Internal
     {
         private const string ModuleName = "CommandQueue";
 
-        private readonly IConnection _connection;
+        private readonly ISampleTunerConnection _connection;
         private readonly object _priorityLock = new();
 
         private Timer? _pollTimer;
@@ -56,7 +56,7 @@ namespace SampleTuner.MyModel.Internal
         /// </summary>
         public bool IsInitialized => _isInitialized;
 
-        public CommandQueue(IConnection connection, CancellationToken cancellationToken)
+        public CommandQueue(ISampleTunerConnection connection, CancellationToken cancellationToken)
         {
             _connection = connection;
 

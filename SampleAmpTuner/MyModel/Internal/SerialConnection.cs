@@ -15,7 +15,7 @@ namespace SampleAmpTuner.MyModel.Internal
     /// Manages serial port connection to the sample combined amplifier+tuner device.
     /// Handles connect, reconnect, disconnect, and event-driven data receive.
     /// </summary>
-    internal class SerialConnection : IConnection
+    internal class SerialConnection : ISampleAmpTunerConnection
     {
         private const string ModuleName = "SerialConnection";
 

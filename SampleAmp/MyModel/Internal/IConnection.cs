@@ -7,9 +7,9 @@ using PgTg.Plugins.Core;
 namespace SampleAmp.MyModel.Internal
 {
     /// <summary>
-    /// Interface for device connection implementations (TCP or Serial).
+    /// Interface for SampleAmp connection implementations (TCP or Serial).
     /// </summary>
-    internal interface IConnection : IDisposable
+    internal interface ISampleAmpConnection : IDisposable
     {
         /// <summary>
         /// Raised when data is received from the device.

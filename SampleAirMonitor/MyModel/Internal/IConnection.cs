@@ -4,12 +4,13 @@ using System;
 using System.Threading.Tasks;
 using PgTg.Plugins.Core;
 
-namespace SampleAmp.MyModel.Internal
+namespace SampleAirMonitor.MyModel.Internal
 {
     /// <summary>
-    /// Interface for device connection implementations (TCP or Serial).
+    /// Interface for SampleAirMonitor connection implementations (TCP or Serial).
+    /// The GPIO plugin sends output commands to a remote GPIO controller device.
     /// </summary>
-    internal interface IConnection : IDisposable
+    internal interface ISampleAirMonitorConnection : IDisposable
     {
         /// <summary>
         /// Raised when data is received from the device.
@@ -42,7 +43,7 @@ namespace SampleAmp.MyModel.Internal
         void Stop();
 
         /// <summary>
-        /// Send data to the device.
+        /// Send a GPIO command string to the remote device.
         /// </summary>
         /// <param name="data">The command string to send.</param>
         /// <returns>True if sent successfully.</returns>

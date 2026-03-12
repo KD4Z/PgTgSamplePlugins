@@ -15,7 +15,7 @@ namespace SampleAmpTuner.MyModel.Internal
     /// Manages TCP connection to the sample combined amplifier+tuner device.
     /// Handles connect, reconnect, disconnect, and async data receive.
     /// </summary>
-    internal class TcpConnection : IConnection
+    internal class TcpConnection : ISampleAmpTunerConnection
     {
         private const string ModuleName = "TcpConnection";
 

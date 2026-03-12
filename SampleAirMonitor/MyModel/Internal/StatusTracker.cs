@@ -1,155 +1,49 @@
 #nullable enable
 
-using System;
-using System.Collections.Generic;
-using PgTg.AMP;
-using PgTg.Common;
-using PgTg.Plugins.Core;
-using PgTg.RADIO;
-
-namespace SampleAmp.MyModel.Internal
+namespace SampleAirMonitor.MyModel.Internal
 {
     /// <summary>
-    /// Tracks current status of the sample amplifier device.
-    /// Maintains state and detects changes. Thread-safe via lock.
+    /// Tracks the last known output state sent to the GPIO controller device.
+    /// Used for logging and optional state query support.
     /// </summary>
     internal class StatusTracker
     {
-        private const string ModuleName = "StatusTracker";
         private readonly object _lock = new();
 
-        // Amplifier state
-        public AmpOperateState AmpState { get; private set; } = AmpOperateState.Unknown;
-        public bool IsPtt { get; private set; }
+        /// <summary>Last amplifier PTT state sent to GPIO controller.</summary>
+        public bool AmpPtt { get; private set; }
 
-        /// <summary>
-        /// Radio's PTT state from interlock status (TRANSMITTING).
-        /// May lead the device's PTT detection, especially with hardware keying.
-        /// </summary>
-        public bool RadioPtt { get; private set; }
+        /// <summary>Last amplifier operate state sent to GPIO controller.</summary>
+        public bool AmpOperate { get; private set; }
 
-        public double ForwardPower { get; private set; }
-        public double SWR { get; private set; } = 1.0;
-        public double ReturnLoss { get; private set; } = 99;
-        public int Temperature { get; private set; }
-        public double Voltage { get; private set; }
-        public double Current { get; private set; }
-        public int BandNumber { get; private set; }
-        public string BandName { get; private set; } = string.Empty;
-        public int FaultCode { get; private set; }
-        public string SerialNumber { get; private set; } = string.Empty;
-        public double FirmwareVersion { get; private set; }
-        public bool IsVitaDataPopulated { get; private set; }
+        /// <summary>Last tuner inline state sent to GPIO controller.</summary>
+        public bool TunerInline { get; private set; }
 
-        /// <summary>
-        /// Apply a status update from the parser.
-        /// </summary>
-        public void ApplyUpdate(ResponseParser.StatusUpdate update)
+        /// <summary>Last tuner tuning state sent to GPIO controller.</summary>
+        public bool TunerTuning { get; private set; }
+
+        /// <summary>Set the amp PTT state.</summary>
+        public void SetAmpPtt(bool ptt)
         {
-            lock (_lock)
-            {
-                if (update.AmpState.HasValue) AmpState = update.AmpState.Value;
-                if (update.IsPtt.HasValue) IsPtt = update.IsPtt.Value;
-                if (update.ForwardPower.HasValue) ForwardPower = update.ForwardPower.Value;
-                if (update.SWR.HasValue) SWR = update.SWR.Value;
-                if (update.ReturnLoss.HasValue) ReturnLoss = update.ReturnLoss.Value;
-                if (update.Temperature.HasValue) Temperature = update.Temperature.Value;
-                if (update.Voltage.HasValue) Voltage = update.Voltage.Value;
-                if (update.Current.HasValue) Current = update.Current.Value;
-                if (update.BandNumber.HasValue) BandNumber = update.BandNumber.Value;
-                if (update.BandName != null) BandName = update.BandName;
-                if (update.FaultCode.HasValue) FaultCode = update.FaultCode.Value;
-                if (update.SerialNumber != null) SerialNumber = update.SerialNumber;
-                if (update.FirmwareVersion.HasValue) FirmwareVersion = update.FirmwareVersion.Value;
-                if (update.IsVitaDataPopulated) IsVitaDataPopulated = true;
-            }
+            lock (_lock) { AmpPtt = ptt; }
         }
 
-        /// <summary>
-        /// Get current amplifier status for events.
-        /// </summary>
-        public AmplifierStatusData GetAmplifierStatus()
+        /// <summary>Set the amp operate/standby state.</summary>
+        public void SetAmpOperate(bool operate)
         {
-            lock (_lock)
-            {
-                return new AmplifierStatusData
-                {
-                    OperateState = AmpState,
-                    IsPttActive = IsPtt,
-                    BandNumber = BandNumber,
-                    BandName = BandName,
-                    FaultCode = FaultCode,
-                    FirmwareVersion = FirmwareVersion.ToString("F2"),
-                    SerialNumber = SerialNumber,
-                    ForwardPower = ForwardPower,
-                    SWR = SWR,
-                    ReturnLoss = ReturnLoss,
-                    Temperature = Temperature
-                };
-            }
+            lock (_lock) { AmpOperate = operate; }
         }
 
-        /// <summary>
-        /// Get meter readings for VITA-49 sender.
-        /// Returns zero values for power/SWR when not transmitting to prevent frozen meter display.
-        /// Uses RadioPtt OR IsPtt to determine transmit state.
-        /// </summary>
-        public Dictionary<MeterType, MeterReading> GetMeterReadings()
+        /// <summary>Set the tuner inline/bypass state.</summary>
+        public void SetTunerInline(bool inline)
         {
-            lock (_lock)
-            {
-                // Use RadioPtt (from radio interlock) OR IsPtt (from device) to determine if transmitting.
-                // RadioPtt may be true before device IsPtt is detected (especially with hardware keying).
-                bool isTransmitting = RadioPtt || IsPtt;
-
-                // Use current values if transmitting, otherwise force zeros to prevent meter freeze
-                double currentFwdPower = isTransmitting ? ForwardPower : 0;
-                double currentSwr = isTransmitting ? SWR : 1.0;
-                double currentReturnLoss = isTransmitting ? ReturnLoss : 99;
-
-                var readings = new Dictionary<MeterType, MeterReading>
-                {
-                    [MeterType.ForwardPower] = new MeterReading(MeterType.ForwardPower, currentFwdPower, MeterUnits.Watts),
-                    [MeterType.SWR] = new MeterReading(MeterType.SWR, currentSwr, MeterUnits.SWR),
-                    [MeterType.ReturnLoss] = new MeterReading(MeterType.ReturnLoss, currentReturnLoss, MeterUnits.Db),
-                    [MeterType.Temperature] = new MeterReading(MeterType.Temperature, Temperature, MeterUnits.DegreesC)
-                };
-
-                return readings;
-            }
+            lock (_lock) { TunerInline = inline; }
         }
 
-        /// <summary>
-        /// Zero meter values (for shutdown).
-        /// </summary>
-        public void ZeroMeterValues()
+        /// <summary>Set the tuner tuning state.</summary>
+        public void SetTunerTuning(bool tuning)
         {
-            lock (_lock)
-            {
-                ForwardPower = 0;
-                SWR = 1.0;
-                ReturnLoss = 99;
-                Temperature = 0;
-            }
-        }
-
-        /// <summary>
-        /// Set the radio's PTT state from interlock status.
-        /// Called when the radio transitions to/from TRANSMITTING state.
-        /// </summary>
-        /// <returns>True if the RadioPtt value changed.</returns>
-        public bool SetRadioPtt(bool isPtt)
-        {
-            lock (_lock)
-            {
-                if (RadioPtt != isPtt)
-                {
-                    Logger.LogVerbose(ModuleName, $"RadioPtt changed: {RadioPtt} -> {isPtt}");
-                    RadioPtt = isPtt;
-                    return true;
-                }
-            }
-            return false;
+            lock (_lock) { TunerTuning = tuning; }
         }
     }
 }

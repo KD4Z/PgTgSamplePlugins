@@ -15,7 +15,7 @@ namespace SampleAmp.MyModel.Internal
     /// Manages TCP connection to the sample amplifier device.
     /// Handles connect, reconnect, disconnect, and async data receive.
     /// </summary>
-    internal class TcpConnection : IConnection
+    internal class TcpConnection : ISampleAmpConnection
     {
         private const string ModuleName = "TcpConnection";
 

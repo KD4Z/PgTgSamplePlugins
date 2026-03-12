@@ -15,7 +15,7 @@ namespace SampleAmp.MyModel.Internal
     /// Manages serial port connection to the sample amplifier device.
     /// Handles connect, reconnect, disconnect, and event-driven data receive.
     /// </summary>
-    internal class SerialConnection : IConnection
+    internal class SerialConnection : ISampleAmpConnection
     {
         private const string ModuleName = "SerialConnection";
 

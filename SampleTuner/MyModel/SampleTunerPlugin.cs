@@ -48,7 +48,7 @@ namespace SampleTuner.MyModel
         private readonly CancellationToken _cancellationToken;
 
         // Internal components
-        private IConnection? _connection;
+        private ISampleTunerConnection? _connection;
         private CommandQueue? _commandQueue;
         private ResponseParser? _parser;
         private StatusTracker? _statusTracker;

@@ -9,13 +9,13 @@ using System.Threading.Tasks;
 using PgTg.Common;
 using PgTg.Plugins.Core;
 
-namespace SampleAmp.MyModel.Internal
+namespace SampleAirMonitor.MyModel.Internal
 {
     /// <summary>
-    /// Manages TCP connection to the sample amplifier device.
+    /// Manages TCP connection to the air monitor GPIO controller device.
     /// Handles connect, reconnect, disconnect, and async data receive.
     /// </summary>
-    internal class TcpConnection : IConnection
+    internal class TcpConnection : ISampleAirMonitorConnection
     {
         private const string ModuleName = "TcpConnection";
 

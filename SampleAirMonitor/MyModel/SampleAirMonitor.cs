@@ -2,17 +2,17 @@
 
 using PgTg.Common;
 using PgTg.Plugins.Core;
-using SampleAmp.MyModel.Internal;
 
-namespace SampleAmp.MyModel
+namespace SampleAirMonitor.MyModel
 {
     /// <summary>
-    /// Configuration for the sample amplifier plugin.
+    /// Configuration for the SampleAirMonitor GPIO output plugin.
+    /// GPIO plugins use the base IPluginConfiguration (no polling intervals needed).
     /// </summary>
-    public class SampleAmpConfiguration : IAmplifierConfiguration
+    public class SampleAirMonitorConfiguration : IPluginConfiguration
     {
         // IPluginConfiguration
-        public string PluginId { get; set; } = SampleAmpPlugin.PluginId;
+        public string PluginId { get; set; } = SampleAirMonitorPlugin.PluginId;
         public bool Enabled { get; set; } = false;
         public PluginConnectionType ConnectionType { get; set; } = PluginConnectionType.TCP;
         public string IpAddress { get; set; } = "192.168.1.100";
@@ -23,10 +23,5 @@ namespace SampleAmp.MyModel
         public bool TcpSupported { get; set; } = true;
         public bool SerialSupported { get; set; } = true;
         public bool WolSupported { get; set; } = false;
-
-        // IAmplifierConfiguration
-        public int PollingIntervalRxMs { get; set; } = Constants.PollingRxMs;
-        public int PollingIntervalTxMs { get; set; } = Constants.PollingTxMs;
-        public int PttWatchdogIntervalMs { get; set; } = Constants.PttWatchdogMs;
     }
 }
