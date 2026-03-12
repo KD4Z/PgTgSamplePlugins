@@ -9,6 +9,7 @@ namespace SampleAirMonitor.MyModel.Internal
     /// Sends GPIO output commands to the remote GPIO controller device.
     /// Unlike amplifier/tuner plugins, the GPIO plugin has no polling — it only
     /// sends commands when the Bridge calls SetAmpPtt, SetAmpOperateMode, etc.
+    /// Also sends frequency/mode commands via CAT or CI-V protocol.
     /// </summary>
     internal class CommandQueue : IDisposable
     {
@@ -39,18 +40,33 @@ namespace SampleAirMonitor.MyModel.Internal
         }
 
         /// <summary>
-        /// Send a GPIO output command immediately.
+        /// Send a GPIO output command immediately (ASCII string).
         /// </summary>
         public void SendCommand(string command)
         {
             if (!_connection.IsConnected)
             {
-                Logger.LogVerbose(ModuleName, $"Not connected — dropping GPIO command: {command}");
+                Logger.LogVerbose(ModuleName, $"Not connected — dropping command: {command}");
                 return;
             }
 
             _connection.Send(command);
-            Logger.LogVerbose(ModuleName, $"GPIO command sent: {command}");
+            Logger.LogVerbose(ModuleName, $"Command sent: {command}");
+        }
+
+        /// <summary>
+        /// Send raw bytes immediately (used for CI-V binary protocol).
+        /// </summary>
+        public void SendCommand(byte[] data)
+        {
+            if (!_connection.IsConnected)
+            {
+                Logger.LogVerbose(ModuleName, "Not connected — dropping binary command");
+                return;
+            }
+
+            _connection.Send(data);
+            Logger.LogVerbose(ModuleName, $"Binary command sent: {data.Length} bytes");
         }
 
         public void Dispose()

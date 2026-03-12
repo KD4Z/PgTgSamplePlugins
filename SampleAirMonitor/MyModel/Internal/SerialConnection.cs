@@ -25,6 +25,7 @@ namespace SampleAirMonitor.MyModel.Internal
         private SerialPort? _serialPort;
         private string _portName = string.Empty;
         private int _baudRate = 38400;
+        private int _reconnectDelayMs = 5000;
         private bool _isRunning;
         private bool _disposed;
         private readonly StringBuilder _receivedMessage = new();
@@ -66,10 +67,11 @@ namespace SampleAirMonitor.MyModel.Internal
         /// <summary>
         /// Configure the serial port settings.
         /// </summary>
-        public void Configure(string portName, int baudRate = 38400)
+        public void Configure(string portName, int baudRate = 38400, int reconnectDelayMs = 5000)
         {
             _portName = portName;
             _baudRate = baudRate;
+            _reconnectDelayMs = reconnectDelayMs;
         }
 
         /// <summary>
@@ -111,6 +113,38 @@ namespace SampleAirMonitor.MyModel.Internal
                     data = "$" + data;
 
                 _serialPort.Write(data);
+                return true;
+            }
+            catch (InvalidOperationException ex)
+            {
+                Logger.LogError(ModuleName, $"Send Error (port not open): {ex.Message}");
+                return false;
+            }
+            catch (TimeoutException ex)
+            {
+                Logger.LogError(ModuleName, $"Send Timeout: {ex.Message}");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogVerbose(ModuleName, $"Error sending message to device: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Send raw bytes to the device (used for CI-V binary protocol).
+        /// </summary>
+        public bool Send(byte[] data)
+        {
+            if (!IsConnected || _serialPort == null)
+            {
+                return false;
+            }
+
+            try
+            {
+                _serialPort.Write(data, 0, data.Length);
                 return true;
             }
             catch (InvalidOperationException ex)
@@ -201,8 +235,7 @@ namespace SampleAirMonitor.MyModel.Internal
 
                 if (_isRunning && !_cancellationToken.IsCancellationRequested)
                 {
-                    // Longer reconnect delay for serial (2000ms vs 50ms for TCP)
-                    await Task.Delay(2000, _cancellationToken);
+                    await Task.Delay(_reconnectDelayMs, _cancellationToken);
                 }
             }
         }

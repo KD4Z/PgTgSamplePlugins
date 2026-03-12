@@ -22,6 +22,12 @@ namespace SampleAirMonitor.MyModel.Internal
         /// <summary>Last tuner tuning state sent to GPIO controller.</summary>
         public bool TunerTuning { get; private set; }
 
+        /// <summary>Last frequency in kHz sent to transceiver.</summary>
+        public int FrequencyKhz { get; private set; }
+
+        /// <summary>Last transmit mode sent to transceiver.</summary>
+        public string TransmitMode { get; private set; } = string.Empty;
+
         /// <summary>Set the amp PTT state.</summary>
         public void SetAmpPtt(bool ptt)
         {
@@ -44,6 +50,32 @@ namespace SampleAirMonitor.MyModel.Internal
         public void SetTunerTuning(bool tuning)
         {
             lock (_lock) { TunerTuning = tuning; }
+        }
+
+        /// <summary>
+        /// Set the frequency. Returns true if the value changed.
+        /// </summary>
+        public bool SetFrequencyKhz(int frequencyKhz)
+        {
+            lock (_lock)
+            {
+                if (FrequencyKhz == frequencyKhz) return false;
+                FrequencyKhz = frequencyKhz;
+                return true;
+            }
+        }
+
+        /// <summary>
+        /// Set the transmit mode. Returns true if the value changed.
+        /// </summary>
+        public bool SetTransmitMode(string mode)
+        {
+            lock (_lock)
+            {
+                if (TransmitMode == mode) return false;
+                TransmitMode = mode;
+                return true;
+            }
         }
     }
 }

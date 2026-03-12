@@ -48,5 +48,12 @@ namespace SampleAirMonitor.MyModel.Internal
         /// <param name="data">The command string to send.</param>
         /// <returns>True if sent successfully.</returns>
         bool Send(string data);
+
+        /// <summary>
+        /// Send raw bytes to the remote device (used for CI-V binary protocol).
+        /// </summary>
+        /// <param name="data">The raw bytes to send.</param>
+        /// <returns>True if sent successfully.</returns>
+        bool Send(byte[] data);
     }
 }

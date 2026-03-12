@@ -26,6 +26,7 @@ namespace SampleAirMonitor.MyModel.Internal
         private NetworkStream? _networkStream;
         private string _ipAddress = string.Empty;
         private int _port;
+        private int _reconnectDelayMs = 5000;
         private bool _isRunning;
         private bool _disposed;
 
@@ -66,10 +67,11 @@ namespace SampleAirMonitor.MyModel.Internal
         /// <summary>
         /// Configure the TCP connection settings.
         /// </summary>
-        public void Configure(string ipAddress, int port)
+        public void Configure(string ipAddress, int port, int reconnectDelayMs = 5000)
         {
             _ipAddress = ipAddress;
             _port = port;
+            _reconnectDelayMs = reconnectDelayMs;
         }
 
         /// <summary>
@@ -112,6 +114,45 @@ namespace SampleAirMonitor.MyModel.Internal
 
                 byte[] bytes = Encoding.ASCII.GetBytes(data);
                 _networkStream.WriteAsync(bytes, 0, bytes.Length);
+                return true;
+            }
+            catch (IOException ex)
+            {
+                if (ex.InnerException is SocketException socketEx)
+                {
+                    Logger.LogError(ModuleName, $"Send Socket Error: {socketEx.Message}");
+                }
+                else
+                {
+                    Logger.LogError(ModuleName, $"Send IO Error: {ex.Message}");
+                }
+                return false;
+            }
+            catch (ObjectDisposedException)
+            {
+                Logger.LogError(ModuleName, "Cannot send data: NetworkStream has been disposed.");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogVerbose(ModuleName, $"Error sending message to device: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Send raw bytes to the device (used for CI-V binary protocol).
+        /// </summary>
+        public bool Send(byte[] data)
+        {
+            if (!IsConnected || _networkStream == null)
+            {
+                return false;
+            }
+
+            try
+            {
+                _networkStream.WriteAsync(data, 0, data.Length);
                 return true;
             }
             catch (IOException ex)
@@ -187,7 +228,7 @@ namespace SampleAirMonitor.MyModel.Internal
 
                 if (_isRunning && !_cancellationToken.IsCancellationRequested)
                 {
-                    await Task.Delay(50, _cancellationToken);
+                    await Task.Delay(_reconnectDelayMs, _cancellationToken);
                 }
             }
         }

@@ -23,5 +23,22 @@ namespace SampleAirMonitor.MyModel
         public bool TcpSupported { get; set; } = true;
         public bool SerialSupported { get; set; } = true;
         public bool WolSupported { get; set; } = false;
+
+        /// <summary>
+        /// Frequency/mode protocol: 1 = CAT (Kenwood/Elecraft), 2 = CI-V (Icom).
+        /// </summary>
+        public int PluginFreqModeProtocol { get; set; } = 1;
+
+        /// <summary>
+        /// CI-V controller address (the PC/controller side). Default 0xE0.
+        /// Only used when PluginFreqModeProtocol = 2.
+        /// </summary>
+        public byte CivControllerAddress { get; set; } = 0xE0;
+
+        /// <summary>
+        /// CI-V transceiver address (the radio side). Default 0x94.
+        /// Only used when PluginFreqModeProtocol = 2.
+        /// </summary>
+        public byte CivTransceiverAddress { get; set; } = 0x94;
     }
 }

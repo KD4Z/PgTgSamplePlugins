@@ -39,5 +39,47 @@ namespace SampleAirMonitor.MyModel.Internal
         public const string KeyAck = "ACK";
 
         #endregion
+
+        #region Frequency/Mode Protocol
+
+        // Protocol selection values (matches PluginFreqModeProtocol config)
+        public const int ProtocolCat = 1;
+        public const int ProtocolCiv = 2;
+
+        // CAT command format (Kenwood/Elecraft style)
+        // FA followed by 11-digit frequency in Hz, terminated with ;
+        public const string CatSetFreqPrefix = "FA";
+        public const int CatFreqDigits = 11;
+
+        // CAT mode command: MD followed by mode digit, terminated with ;
+        public const string CatSetModePrefix = "MD";
+
+        // CI-V frame bytes (Icom protocol)
+        public const byte CivPreamble = 0xFE;
+        public const byte CivEndOfMessage = 0xFD;
+        public const byte CivCmdSetFreq = 0x05;
+        public const byte CivCmdSetMode = 0x06;
+
+        // CI-V mode byte values
+        public const byte CivModeLsb = 0x00;
+        public const byte CivModeUsb = 0x01;
+        public const byte CivModeAm = 0x02;
+        public const byte CivModeCw = 0x03;
+        public const byte CivModeRtty = 0x04;
+        public const byte CivModeFm = 0x05;
+        public const byte CivModeCwR = 0x07;
+        public const byte CivModeRttyR = 0x08;
+
+        // CAT mode digit values (Kenwood/Elecraft)
+        public const char CatModeLsb = '1';
+        public const char CatModeUsb = '2';
+        public const char CatModeCw = '3';
+        public const char CatModeFm = '4';
+        public const char CatModeAm = '5';
+        public const char CatModeCwR = '7';
+        public const char CatModeRtty = '6';
+        public const char CatModeRttyR = '9';
+
+        #endregion
     }
 }

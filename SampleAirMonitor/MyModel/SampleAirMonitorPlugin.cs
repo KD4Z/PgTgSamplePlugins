@@ -69,7 +69,7 @@ namespace SampleAirMonitor.MyModel
             Capability = PluginCapability.Gpio,
             Description = "Sample GPIO output plugin for third-party development reference",
             ConfigurationType = typeof(SampleAirMonitorConfiguration),
-            UiSections = PluginUiSection.Tcp | PluginUiSection.Serial | PluginUiSection.Reconnect | PluginUiSection.GpioAction
+            UiSections = PluginUiSection.Tcp | PluginUiSection.Serial | PluginUiSection.Reconnect | PluginUiSection.Protocol
         };
 
         public PluginConnectionState ConnectionState => _connection?.ConnectionState ?? PluginConnectionState.Disconnected;
@@ -105,17 +105,20 @@ namespace SampleAirMonitor.MyModel
             if (_config.ConnectionType == PluginConnectionType.Serial)
             {
                 var serialConnection = new SerialConnection(_cancellationToken);
-                serialConnection.Configure(_config.SerialPort, _config.BaudRate);
+                serialConnection.Configure(_config.SerialPort, _config.BaudRate, _config.ReconnectDelayMs);
                 _connection = serialConnection;
                 Logger.LogInfo(ModuleName, $"Using serial connection: {_config.SerialPort} at {_config.BaudRate} baud");
             }
             else
             {
                 var tcpConnection = new TcpConnection(_cancellationToken);
-                tcpConnection.Configure(_config.IpAddress, _config.Port);
+                tcpConnection.Configure(_config.IpAddress, _config.Port, _config.ReconnectDelayMs);
                 _connection = tcpConnection;
                 Logger.LogInfo(ModuleName, $"Using TCP connection: {_config.IpAddress}:{_config.Port}");
             }
+
+            string protocolName = _config.PluginFreqModeProtocol == Constants.ProtocolCiv ? "CI-V" : "CAT";
+            Logger.LogInfo(ModuleName, $"Frequency/mode protocol: {protocolName}, reconnect delay: {_config.ReconnectDelayMs}ms");
 
             // Create other components
             _commandQueue = new CommandQueue(_connection);
@@ -267,12 +270,69 @@ namespace SampleAirMonitor.MyModel
 
         public void SetFrequencyKhz(int frequencyKhz)
         {
-            // Notify the plugin of the radio's current transmit  frequency in kHz (e.g. 7203).
+            if (_statusTracker == null || _commandQueue == null || _config == null) return;
+
+            // Only send if frequency actually changed
+            if (!_statusTracker.SetFrequencyKhz(frequencyKhz)) return;
+
+            SendFrequencyCommand(frequencyKhz);
+            Logger.LogVerbose(ModuleName, $"SetFrequencyKhz({frequencyKhz})");
         }
 
         public void SetTransmitMode(string mode)
         {
-            // Notify the plugin of the radio's current transmit mode (e.g. "USB", "CW", "AM").
+            if (_statusTracker == null || _commandQueue == null || _config == null) return;
+            if (string.IsNullOrEmpty(mode)) return;
+
+            // Only send if mode actually changed
+            if (!_statusTracker.SetTransmitMode(mode)) return;
+
+            SendModeCommand(mode);
+            Logger.LogVerbose(ModuleName, $"SetTransmitMode({mode})");
+        }
+
+        #endregion
+
+        #region Frequency/Mode Senders
+
+        private void SendFrequencyCommand(int frequencyKhz)
+        {
+            if (_commandQueue == null || _config == null) return;
+
+            if (_config.PluginFreqModeProtocol == Constants.ProtocolCiv)
+            {
+                byte[] frame = CivProtocolBuilder.BuildSetFrequency(
+                    frequencyKhz, _config.CivTransceiverAddress, _config.CivControllerAddress);
+                _commandQueue.SendCommand(frame);
+            }
+            else
+            {
+                string cmd = CatProtocolBuilder.BuildSetFrequency(frequencyKhz);
+                _commandQueue.SendCommand(cmd);
+            }
+        }
+
+        private void SendModeCommand(string mode)
+        {
+            if (_commandQueue == null || _config == null) return;
+
+            if (_config.PluginFreqModeProtocol == Constants.ProtocolCiv)
+            {
+                byte[]? frame = CivProtocolBuilder.BuildSetMode(
+                    mode, _config.CivTransceiverAddress, _config.CivControllerAddress);
+                if (frame != null)
+                    _commandQueue.SendCommand(frame);
+                else
+                    Logger.LogVerbose(ModuleName, $"Unrecognized CI-V mode: {mode}");
+            }
+            else
+            {
+                string? cmd = CatProtocolBuilder.BuildSetMode(mode);
+                if (cmd != null)
+                    _commandQueue.SendCommand(cmd);
+                else
+                    Logger.LogVerbose(ModuleName, $"Unrecognized CAT mode: {mode}");
+            }
         }
 
         #endregion
@@ -294,11 +354,20 @@ namespace SampleAirMonitor.MyModel
 
             if (state == PluginConnectionState.Connected)
             {
-                Logger.LogInfo(ModuleName, "Connected to GPIO device");
+                Logger.LogInfo(ModuleName, "Connected to device");
+
+                // Resend last known frequency and mode on reconnect
+                if (_statusTracker != null)
+                {
+                    if (_statusTracker.FrequencyKhz > 0)
+                        SendFrequencyCommand(_statusTracker.FrequencyKhz);
+                    if (!string.IsNullOrEmpty(_statusTracker.TransmitMode))
+                        SendModeCommand(_statusTracker.TransmitMode);
+                }
             }
             else if (state == PluginConnectionState.Disconnected)
             {
-                Logger.LogInfo(ModuleName, "Disconnected from GPIO device");
+                Logger.LogInfo(ModuleName, "Disconnected from device");
             }
         }
 
