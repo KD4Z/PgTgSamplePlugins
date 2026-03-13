@@ -21,7 +21,7 @@ namespace SampleAirMonitor.MyModel
     [PluginInfo("sample.airmonitor", "Air Monitor",
         Version = "1.0.0",
         Manufacturer = "KD4Z",
-        Capability = PluginCapability.Gpio,
+        Capability = PluginCapability.FrequencyModeMonitoring,
         Description = "Sample GPIO output plugin for third-party development reference",
         // UiSections declares which control groups PluginManagerForm will display
         // for this plugin when it is selected. Combine flags to enable multiple sections.
