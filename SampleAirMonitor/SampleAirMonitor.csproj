@@ -4,8 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
-    <AssemblyVersion>1.26.991.1</AssemblyVersion>
-    <FileVersion>1.26.991.1</FileVersion>
+    <AssemblyVersion>1.26.993.1</AssemblyVersion>
+    <FileVersion>1.26.993.1</FileVersion>
     <RepositoryUrl>https://github.com/KD4Z/PgTgSamplePlugins/tree/main/SampleAirMonitor</RepositoryUrl>
   </PropertyGroup>
 
