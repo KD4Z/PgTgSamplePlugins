@@ -16,7 +16,7 @@ Note: The $commands coded in each example are fictitious.  You will need to tran
 
 Demonstrates how to implement a standalone output monitoring plugin. Features:
 
-- Full End-To-End implementation of the Airmonitor plugin that is complied and deployed with PgTgBridge.
+- Full End-To-End implementation of the Air Monitor plugin that is complied and deployed with PgTgBridge.
 - TCP and serial connection support via `IConnection` abstraction.
 - Band Data Sender: Tracks radio transmit slice. Sends current frequency and mode to external host.
 - Targeting direct consumption by another radio used for air check monitoring.
