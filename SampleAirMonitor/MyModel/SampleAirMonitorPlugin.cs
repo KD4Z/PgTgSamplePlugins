@@ -16,13 +16,13 @@ namespace SampleAirMonitor.MyModel
     /// IConnection (TCP or Serial), CommandQueue, ResponseParser, StatusTracker, Constants.
     ///
     /// Unlike amplifier/tuner plugins, this GPIO plugin has no polling — it only
-    /// sends output commands when the Bridge calls SetAmpPtt, SetAmpOperateMode, etc.
+    /// sends tx frequency/mode to a remote transceiver/device when SetFrequencyKhz/SetTransmitMode are called by the Bridge.
     /// </summary>
     [PluginInfo("sample.airmonitor", "Air Monitor",
         Version = "1.0.0",
         Manufacturer = "PgTg",
         Capability = PluginCapability.FrequencyModeMonitoring,
-        Description = "Sample GPIO output plugin for third-party development reference",
+        Description = "Sample plugin that receives frequency and mode updates from the PgTgBridge and forwards them to a transceiver using CAT or CI-V protocol",
         // UiSections declares which control groups PluginManagerForm will display
         // for this plugin when it is selected. Combine flags to enable multiple sections.
         //
@@ -222,11 +222,7 @@ namespace SampleAirMonitor.MyModel
         /// </summary>
         public void SetAmpPtt(bool ptt)
         {
-            if (_statusTracker == null || _commandQueue == null) return;
-
-            _statusTracker.SetAmpPtt(ptt);
-            _commandQueue.SendCommand(ptt ? Constants.AmpPttOnCmd : Constants.AmpPttOffCmd);
-            Logger.LogVerbose(ModuleName, $"SetAmpPtt({ptt})");
+            // Not implemented in this sample.
         }
 
         /// <summary>
@@ -235,11 +231,7 @@ namespace SampleAirMonitor.MyModel
         /// </summary>
         public void SetAmpOperateMode(bool operate)
         {
-            if (_statusTracker == null || _commandQueue == null) return;
-
-            _statusTracker.SetAmpOperate(operate);
-            _commandQueue.SendCommand(operate ? Constants.AmpOperateCmd : Constants.AmpStandbyCmd);
-            Logger.LogVerbose(ModuleName, $"SetAmpOperateMode({operate})");
+            // Not implemented in this sample.
         }
 
         /// <summary>
@@ -248,11 +240,7 @@ namespace SampleAirMonitor.MyModel
         /// </summary>
         public void SetTunerInline(bool inline)
         {
-            if (_statusTracker == null || _commandQueue == null) return;
-
-            _statusTracker.SetTunerInline(inline);
-            _commandQueue.SendCommand(inline ? Constants.TunerInlineCmd : Constants.TunerBypassCmd);
-            Logger.LogVerbose(ModuleName, $"SetTunerInline({inline})");
+            // Not implemented in this sample.
         }
 
         /// <summary>
@@ -261,11 +249,7 @@ namespace SampleAirMonitor.MyModel
         /// </summary>
         public void SetTunerTune(bool tuning)
         {
-            if (_statusTracker == null || _commandQueue == null) return;
-
-            _statusTracker.SetTunerTuning(tuning);
-            _commandQueue.SendCommand(tuning ? Constants.TunerTuneStartCmd : Constants.TunerTuneStopCmd);
-            Logger.LogVerbose(ModuleName, $"SetTunerTune({tuning})");
+            // Not implemented in this sample.
         }
 
         public void SetFrequencyKhz(int frequencyKhz)
@@ -276,19 +260,12 @@ namespace SampleAirMonitor.MyModel
             if (!_statusTracker.SetFrequencyKhz(frequencyKhz)) return;
 
             SendFrequencyCommand(frequencyKhz);
-            Logger.LogVerbose(ModuleName, $"SetFrequencyKhz({frequencyKhz})");
+            //Logger.LogVerbose(ModuleName, $"SetFrequencyKhz({frequencyKhz})");
         }
 
         public void SetTransmitMode(string mode)
         {
-            if (_statusTracker == null || _commandQueue == null || _config == null) return;
-            if (string.IsNullOrEmpty(mode)) return;
-
-            // Only send if mode actually changed
-            if (!_statusTracker.SetTransmitMode(mode)) return;
-
-            SendModeCommand(mode);
-            Logger.LogVerbose(ModuleName, $"SetTransmitMode({mode})");
+            // Not implemented in this sample.
         }
 
         #endregion
@@ -344,7 +321,7 @@ namespace SampleAirMonitor.MyModel
             if (_parser == null) return;
 
             bool isAck = _parser.Parse(data);
-            Logger.LogVerbose(ModuleName, isAck ? $"ACK received: {data}" : $"Unexpected response: {data}");
+            //Logger.LogVerbose(ModuleName, isAck ? $"ACK received: {data}" : $"Unexpected response: {data}");
         }
 
         private void OnConnectionStateChanged(PluginConnectionState state)

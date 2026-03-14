@@ -6,6 +6,46 @@ Note: The $commands coded in each example are fictitious.  You will need to tran
 
 ## Projects
 
+### SampleAirMonitor —  Plugin
+
+**Plugin ID:** `sample.airmonitor`
+**Interface:** `IAmplifierPlugin`
+**Capability:** `PluginCapability.FrequencyModeMonitoring`
+**Device ID:** `SAMPAIRMON`
+
+
+Demonstrates how to implement a standalone output monitoring plugin. Features:
+
+- Full End-To-End implementation of the Airmonitor plugin that is complied and deployed with PgTgBridge.
+- TCP and serial connection support via `IConnection` abstraction.
+- Band Data Sender: Tracks radio transmit slice. Sends current frequency and mode to external host.
+- Targeting direct consumption by another radio used for air check monitoring.
+- Supports CAT (Kenwood/Elecraft) text format.
+- Supports CI-V (Icom) binary format. Builds Icom CI-V binary protocol frames for setting transceiver frequency and mode.
+- 
+
+**Protocol format:** 
+CAT:
+Frequency: `FAxxxxxxxxxxx;` (11-digit Hz) with `;` terminator.
+Example: 14060 kHz → "FA00014060000;"
+
+Mode: `MDn;` (mode digit) with `;` terminator.
+Example: "USB" → "MD2;"
+
+CI-V:
+Frame format: FE FE [to] [from] [cmd] [data...] FD
+
+Frequency: 
+Builds a CI-V set-frequency frame.
+Frequency is provided in kHz and converted to Hz, then BCD-encoded (LSB first).
+Example: 14060 kHz = 14060000 Hz → FE FE [to] [from] 05 00 00 60 40 01 FD
+
+Mode:
+Builds a CI-V set-mode frame.
+Example: "USB" → FE FE [to] [from] 06 01 FD
+
+---
+
 ### SampleAmp — Amplifier-Only Plugin
 
 **Plugin ID:** `sample.amplifier`

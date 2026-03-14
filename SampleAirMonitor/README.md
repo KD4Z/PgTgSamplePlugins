@@ -6,9 +6,9 @@ A PgTgBridge GPIO output plugin that sends radio frequency and mode commands to 
 
 **Plugin ID:** `sample.airmonitor`
 **Interface:** `IGpioOutputPlugin`
-**Capability:** `PluginCapability.Gpio`
+**Capability:** `PluginCapability.FrequencyModeMonitoring`
 
-This plugin receives frequency and mode updates from the PgTgBridge and forwards them to a transceiver or external device. It also mirrors GPIO state changes (PTT, amplifier operate/standby, tuner inline/bypass, tune start/stop).
+This plugin receives frequency and mode updates from the PgTgBridge and forwards them to a transceiver using CAT or CI-V protocol. 
 
 ## Features
 
@@ -16,7 +16,7 @@ This plugin receives frequency and mode updates from the PgTgBridge and forwards
 - **TCP and serial connections** with configurable auto-reconnect delay
 - **Change detection** — only sends commands when frequency or mode actually changes
 - **Reconnect resend** — automatically resends last known frequency and mode when connection is restored
-- **GPIO mirroring** — forwards PTT, operate/standby, tuner inline/bypass, and tune state changes
+
 
 ## Configuration
 
@@ -88,16 +88,6 @@ FE FE 94 E0 06 01 01 FD     ← USB, normal filter
 | CW-R | `0x07` |
 | RTTY-R | `0x08` |
 
-## GPIO Commands
-
-The plugin also mirrors amplifier and tuner state changes as GPIO output commands using a `$`-prefix protocol:
-
-```
-$GPIO AMP_PTT_ON;      $GPIO AMP_PTT_OFF;
-$GPIO AMP_OPR;          $GPIO AMP_STB;
-$GPIO TUN_INLINE;       $GPIO TUN_BYPASS;
-$GPIO TUN_START;        $GPIO TUN_STOP;
-```
 
 ## Project Structure
 
@@ -126,12 +116,13 @@ dotnet build SampleAirMonitor.csproj
 ```
 
 Copy the output DLL to the PgTg plugins directory and configure it in PgTgController Settings - Plugin Manager.
+Typical path is: `C:\Program Files\PgTgBridge\plugins`
 
 ## Creating Your Own Plugin
 
 1. Copy this project and rename the namespace, class names, and `PluginId`.
 2. Set `PluginFreqModeProtocol` to match your target device (CAT or CI-V).
 3. For CI-V devices, set the correct controller and transceiver addresses.
-4. Update `Constants.cs` if your device uses different GPIO command strings.
+4. Update `Constants.cs` if your device uses different command strings.
 5. Update `ResponseParser.cs` to decode your device's acknowledgment format.
 6. Update the `[PluginInfo(...)]` attribute with your plugin's ID, name, and manufacturer.
