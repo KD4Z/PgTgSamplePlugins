@@ -24,8 +24,4 @@
     </Reference>
   </ItemGroup>
 
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="call &quot;C:\Users\KD4Z\source\repos\PgTgEmulator\Installer\BuildInstaller.bat&quot;" />
-  </Target>
-
 </Project>
