@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Net.Sockets;
 using System.Text;
@@ -106,12 +107,9 @@ namespace SampleAirMonitor.MyModel.Internal
             {
                 return false;
             }
-
+            //Debug.WriteLine($"AirMonitor: Sending command via TCP: {data}");
             try
             {
-                if (!data.StartsWith("$"))
-                    data = "$" + data;
-
                 byte[] bytes = Encoding.ASCII.GetBytes(data);
                 _networkStream.WriteAsync(bytes, 0, bytes.Length);
                 return true;
