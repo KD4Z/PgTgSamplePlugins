@@ -28,12 +28,11 @@ namespace SampleAirMonitor.MyModel.Internal
 
         /// <summary>
         /// Build a CAT set-frequency command string.
-        /// Frequency is provided in kHz and converted to Hz for the 11-digit format.
-        /// Example: 14060 kHz → "FA00014060000;"
+        /// Frequency is provided in Hz for the 11-digit format.
+        /// Example: 14060000 Hz → "FA00014060000;"
         /// </summary>
-        public static string BuildSetFrequency(int frequencyKhz)
+        public static string BuildSetFrequency(int frequencyHz)
         {
-            long frequencyHz = (long)frequencyKhz * 1000;
             return Constants.CatSetFreqPrefix +
                    frequencyHz.ToString().PadLeft(Constants.CatFreqDigits, '0') + ";";
         }

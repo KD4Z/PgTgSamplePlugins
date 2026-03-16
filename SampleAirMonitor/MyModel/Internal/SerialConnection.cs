@@ -109,9 +109,6 @@ namespace SampleAirMonitor.MyModel.Internal
 
             try
             {
-                if (!data.StartsWith("$"))
-                    data = "$" + data;
-
                 _serialPort.Write(data);
                 return true;
             }

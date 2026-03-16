@@ -1,12 +1,13 @@
 #nullable enable
 
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 using PgTg.Common;
 using PgTg.Plugins;
 using PgTg.Plugins.Core;
 using SampleAirMonitor.MyModel.Internal;
+using System;
+using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace SampleAirMonitor.MyModel
 {
@@ -16,7 +17,7 @@ namespace SampleAirMonitor.MyModel
     /// IConnection (TCP or Serial), CommandQueue, ResponseParser, StatusTracker, Constants.
     ///
     /// Unlike amplifier/tuner plugins, this GPIO plugin has no polling — it only
-    /// sends tx frequency/mode to a remote transceiver/device when SetFrequencyKhz/SetTransmitMode are called by the Bridge.
+    /// sends tx frequency/mode to a remote transceiver/device when SetFrequencyHz/SetTransmitMode are called by the Bridge.
     /// </summary>
     [PluginInfo("sample.airmonitor", "Air Monitor",
         Version = "1.0.0",
@@ -252,39 +253,44 @@ namespace SampleAirMonitor.MyModel
             // Not implemented in this sample.
         }
 
-        public void SetFrequencyKhz(int frequencyKhz)
+        public void SetFrequencyHz(int frequencyHz)
         {
             if (_statusTracker == null || _commandQueue == null || _config == null) return;
 
             // Only send if frequency actually changed
-            if (!_statusTracker.SetFrequencyKhz(frequencyKhz)) return;
+            if (!_statusTracker.SetFrequencyHz(frequencyHz)) return;
 
-            SendFrequencyCommand(frequencyKhz);
-            //Logger.LogVerbose(ModuleName, $"SetFrequencyKhz({frequencyKhz})");
+            SendFrequencyCommand(frequencyHz);
+            //Logger.LogVerbose(ModuleName, $"SetFrequencyHz({frequencyHz})");
         }
 
         public void SetTransmitMode(string mode)
         {
-            // Not implemented in this sample.
+            if (_statusTracker == null || _commandQueue == null || _config == null) return;
+
+            // Only send if mode actually changed
+            if (!_statusTracker.SetTransmitMode(mode)) return;
+
+            SendModeCommand(mode);
         }
 
         #endregion
 
         #region Frequency/Mode Senders
 
-        private void SendFrequencyCommand(int frequencyKhz)
+        private void SendFrequencyCommand(int frequencyHz)
         {
             if (_commandQueue == null || _config == null) return;
-
+            Debug.WriteLine(ModuleName + $" SendFrequencyCommand({frequencyHz} Hz)");
             if (_config.PluginFreqModeProtocol == Constants.ProtocolCiv)
             {
                 byte[] frame = CivProtocolBuilder.BuildSetFrequency(
-                    frequencyKhz, _config.CivTransceiverAddress, _config.CivControllerAddress);
+                    frequencyHz, _config.CivTransceiverAddress, _config.CivControllerAddress);
                 _commandQueue.SendCommand(frame);
             }
             else
             {
-                string cmd = CatProtocolBuilder.BuildSetFrequency(frequencyKhz);
+                string cmd = CatProtocolBuilder.BuildSetFrequency(frequencyHz);
                 _commandQueue.SendCommand(cmd);
             }
         }
@@ -292,7 +298,7 @@ namespace SampleAirMonitor.MyModel
         private void SendModeCommand(string mode)
         {
             if (_commandQueue == null || _config == null) return;
-
+            Debug.WriteLine(ModuleName + $" SendModeCommand({mode})");
             if (_config.PluginFreqModeProtocol == Constants.ProtocolCiv)
             {
                 byte[]? frame = CivProtocolBuilder.BuildSetMode(
@@ -336,8 +342,8 @@ namespace SampleAirMonitor.MyModel
                 // Resend last known frequency and mode on reconnect
                 if (_statusTracker != null)
                 {
-                    if (_statusTracker.FrequencyKhz > 0)
-                        SendFrequencyCommand(_statusTracker.FrequencyKhz);
+                    if (_statusTracker.FrequencyHz > 0)
+                        SendFrequencyCommand(_statusTracker.FrequencyHz);
                     if (!string.IsNullOrEmpty(_statusTracker.TransmitMode))
                         SendModeCommand(_statusTracker.TransmitMode);
                 }

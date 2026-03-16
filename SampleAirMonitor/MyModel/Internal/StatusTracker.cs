@@ -22,8 +22,8 @@ namespace SampleAirMonitor.MyModel.Internal
         /// <summary>Last tuner tuning state sent to GPIO controller.</summary>
         public bool TunerTuning { get; private set; }
 
-        /// <summary>Last frequency in kHz sent to transceiver.</summary>
-        public int FrequencyKhz { get; private set; }
+        /// <summary>Last frequency in Hz sent to transceiver.</summary>
+        public int FrequencyHz { get; private set; }
 
         /// <summary>Last transmit mode sent to transceiver.</summary>
         public string TransmitMode { get; private set; } = string.Empty;
@@ -55,12 +55,12 @@ namespace SampleAirMonitor.MyModel.Internal
         /// <summary>
         /// Set the frequency. Returns true if the value changed.
         /// </summary>
-        public bool SetFrequencyKhz(int frequencyKhz)
+        public bool SetFrequencyHz(int frequencyHz)
         {
             lock (_lock)
             {
-                if (FrequencyKhz == frequencyKhz) return false;
-                FrequencyKhz = frequencyKhz;
+                if (FrequencyHz == frequencyHz) return false;
+                FrequencyHz = frequencyHz;
                 return true;
             }
         }

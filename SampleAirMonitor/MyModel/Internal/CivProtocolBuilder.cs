@@ -28,12 +28,11 @@ namespace SampleAirMonitor.MyModel.Internal
 
         /// <summary>
         /// Build a CI-V set-frequency frame.
-        /// Frequency is provided in kHz and converted to Hz, then BCD-encoded (LSB first).
-        /// Example: 14060 kHz = 14060000 Hz → FE FE [to] [from] 05 00 00 60 40 01 FD
+        /// Frequency is provided in Hz, then BCD-encoded (LSB first).
+        /// Example: 14060000 Hz → FE FE [to] [from] 05 00 00 60 40 01 FD
         /// </summary>
-        public static byte[] BuildSetFrequency(int frequencyKhz, byte transceiverAddress, byte controllerAddress)
+        public static byte[] BuildSetFrequency(int frequencyHz, byte transceiverAddress, byte controllerAddress)
         {
-            long frequencyHz = (long)frequencyKhz * 1000;
             byte[] bcd = FrequencyToBcd(frequencyHz);
 
             // Frame: FE FE <to> <from> <cmd> <bcd[0..4]> FD
