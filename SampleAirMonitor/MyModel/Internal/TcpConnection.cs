@@ -18,7 +18,7 @@ namespace SampleAirMonitor.MyModel.Internal
     /// </summary>
     internal class TcpConnection : ISampleAirMonitorConnection
     {
-        private const string ModuleName = "TcpConnection";
+        private const string ModuleName = "AirMonitor-Tcp";
 
         private readonly CancellationToken _cancellationToken;
         private readonly object _lock = new();
@@ -189,8 +189,9 @@ namespace SampleAirMonitor.MyModel.Internal
                     {
                         _tcpClient = new TcpClient();
                     }
-
+#if DEBUG
                     Logger.LogInfo(ModuleName, $"Attempting to connect to device on {_ipAddress}:{_port}");
+#endif
                     await _tcpClient.ConnectAsync(_ipAddress, _port, _cancellationToken);
 
                     if (_tcpClient.Connected)
