@@ -45,7 +45,7 @@ namespace SampleAirMonitor.MyModel
     public class SampleAirMonitorPlugin : IGpioOutputPlugin
     {
         public const string PluginId = "sample.airmonitor";
-        private const string ModuleName = "SampleAirMonitorPlugin";
+        private const string ModuleName = "AirMonitor";
 
         private readonly CancellationToken _cancellationToken;
 

@@ -9,6 +9,13 @@
     <RepositoryUrl>https://github.com/KD4Z/PgTgSamplePlugins/tree/main/SampleAirMonitor</RepositoryUrl>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <NoWarn>$(NoWarn);CA1416;CS7022</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <NoWarn>$(NoWarn);CA1416;CS7022</NoWarn>
+  </PropertyGroup>
+  
   <ItemGroup>
     <PackageReference Include="System.IO.Ports" Version="10.0.1" />
   </ItemGroup>
