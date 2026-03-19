@@ -23,6 +23,7 @@ namespace SampleAmp.MyModel
         public bool TcpSupported { get; set; } = true;
         public bool SerialSupported { get; set; } = true;
         public bool WolSupported { get; set; } = false;
+        public bool SkipDeviceWakeup { get; set; } = false;
 
         // IAmplifierConfiguration
         public int PollingIntervalRxMs { get; set; } = Constants.PollingRxMs;

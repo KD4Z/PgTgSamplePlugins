@@ -138,6 +138,7 @@ namespace SampleAmpTuner.MyModel
                 _config.PollingIntervalRxMs,
                 _config.PollingIntervalTxMs,
                 _config.PttWatchdogIntervalMs);
+            _commandQueue.SkipDeviceWakeup = _config.SkipDeviceWakeup;
 
             // Wire up events
             _connection.DataReceived += OnDataReceived;
@@ -235,6 +236,30 @@ namespace SampleAmpTuner.MyModel
                 _connection.Stop();
                 _connection.Dispose();
             }
+        }
+
+        #endregion
+
+        #region IDevicePlugin Wakeup/Shutdown
+
+        public Task WakeupDeviceAsync()
+        {
+            if (_connection?.IsConnected == true)
+            {
+                _connection.Send(Constants.WakeUpCmd);
+                Logger.LogInfo(ModuleName, "WakeupDeviceAsync: sent WakeUpCmd");
+            }
+            return Task.CompletedTask;
+        }
+
+        public Task ShutdownDeviceAsync()
+        {
+            if (_connection?.IsConnected == true)
+            {
+                _connection.Send(Constants.ShutdownCmd);
+                Logger.LogInfo(ModuleName, "ShutdownDeviceAsync: sent ShutdownCmd");
+            }
+            return Task.CompletedTask;
         }
 
         #endregion

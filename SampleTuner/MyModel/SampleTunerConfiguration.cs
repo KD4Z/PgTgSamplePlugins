@@ -69,6 +69,12 @@ namespace SampleTuner.MyModel
         /// </summary>
         public bool WolSupported { get; set; } = false;
 
+        /// <summary>
+        /// When true, skip the device initialization/wake-up sequence (AmpWakeupMode=0).
+        /// Not applicable to tuner-only plugins but required by IPluginConfiguration.
+        /// </summary>
+        public bool SkipDeviceWakeup { get; set; } = false;
+
         // ITunerConfiguration specific properties
 
         /// <summary>

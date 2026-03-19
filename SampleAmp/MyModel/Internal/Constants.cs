@@ -15,6 +15,7 @@ namespace SampleAmp.MyModel.Internal
 
         // Device initialization commands
         public const string WakeUpCmd = "$WKP;";
+        public const string ShutdownCmd = "$SDN;";        // Full power-off command
         public const string IdentifyCmd = "$IDN;";
         public const string IdentifyResponse = "SAMP500";
         public static readonly bool DeviceInitializationEnabled = true;

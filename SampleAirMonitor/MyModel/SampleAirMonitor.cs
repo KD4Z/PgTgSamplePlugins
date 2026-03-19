@@ -23,6 +23,7 @@ namespace SampleAirMonitor.MyModel
         public bool TcpSupported { get; set; } = true;
         public bool SerialSupported { get; set; } = true;
         public bool WolSupported { get; set; } = false;
+        public bool SkipDeviceWakeup { get; set; } = false;
 
         /// <summary>
         /// Frequency/mode protocol: 1 = CAT (Kenwood/Elecraft), 2 = CI-V (Icom).
