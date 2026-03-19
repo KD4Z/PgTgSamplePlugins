@@ -15,6 +15,8 @@ namespace SampleTuner.MyModel.Internal
         #region CAT Command Strings
 
         // Device initialization
+        public const string WakeUpCmd = "$WKP;";
+        public const string ShutdownCmd = "$SDN;";        // Full power-off command
         public const string IdentifyCmd = "$IDN;";
         public const string IdentifyResponse = "SAMP-T";
         public static readonly bool DeviceInitializationEnabled = false;  // Demonstrates alternate path

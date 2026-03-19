@@ -56,6 +56,12 @@ namespace SampleTuner.MyModel.Internal
         /// </summary>
         public bool IsInitialized => _isInitialized;
 
+        /// <summary>
+        /// When true, skip the device initialization/wake-up sequence.
+        /// Set by the plugin when AmpWakeupMode == 0.
+        /// </summary>
+        public bool SkipDeviceWakeup { get; set; } = false;
+
         public CommandQueue(ISampleTunerConnection connection, CancellationToken cancellationToken)
         {
             _connection = connection;
@@ -110,12 +116,15 @@ namespace SampleTuner.MyModel.Internal
         /// <returns>Task that completes when device responds.</returns>
         private async Task StartDeviceInitializationAsync()
         {
-            if (!Constants.DeviceInitializationEnabled)
+            if (!Constants.DeviceInitializationEnabled || SkipDeviceWakeup)
             {
                 // Unsubscribe from DataReceived since we don't need it
                 _connection.DataReceived -= OnDataReceived;
                 _isInitialized = true;
-                Logger.LogVerbose(ModuleName, "Device initialization disabled, starting normal polling immediately");
+                if (SkipDeviceWakeup)
+                    Logger.LogVerbose(ModuleName, "Skipping device initialization (AmpWakeupMode=0)");
+                else
+                    Logger.LogVerbose(ModuleName, "Device initialization disabled, starting normal polling immediately");
                 _pollTimer?.Start();
                 return;
             }
