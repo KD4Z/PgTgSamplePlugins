@@ -19,10 +19,13 @@ namespace SampleAirMonitor.MyModel.Internal
             { "CW",    Constants.CatModeCw },
             { "FM",    Constants.CatModeFm },
             { "AM",    Constants.CatModeAm },
+            { "SAM",   Constants.CatModeAm },
             { "CW-R",  Constants.CatModeCwR },
             { "RTTY",  Constants.CatModeRtty },
             { "RTTY-R",Constants.CatModeRttyR },
             { "DATA",  Constants.CatModeUsb },
+            { "DIGU",  Constants.CatModeUsb },
+            { "DIGL",  Constants.CatModeLsb },
             { "DATA-R",Constants.CatModeLsb },
         };
 

@@ -28,7 +28,7 @@ namespace SampleAirMonitor.MyModel.Internal
         /// </summary>
         public void Start()
         {
-            Logger.LogVerbose(ModuleName, "GPIO command queue started");
+            //Logger.LogVerbose(ModuleName, "GPIO command queue started");
         }
 
         /// <summary>
@@ -36,7 +36,7 @@ namespace SampleAirMonitor.MyModel.Internal
         /// </summary>
         public void Stop()
         {
-            Logger.LogVerbose(ModuleName, "GPIO command queue stopped");
+            //Logger.LogVerbose(ModuleName, "GPIO command queue stopped");
         }
 
         /// <summary>
@@ -46,12 +46,12 @@ namespace SampleAirMonitor.MyModel.Internal
         {
             if (!_connection.IsConnected)
             {
-                Logger.LogVerbose(ModuleName, $"Not connected — dropping command: {command}");
+                //Logger.LogVerbose(ModuleName, $"Not connected — dropping command: {command}");
                 return;
             }
 
             _connection.Send(command);
-            Logger.LogVerbose(ModuleName, $"Command sent: {command}");
+           // Logger.LogVerbose(ModuleName, $"Command sent: {command}");
         }
 
         /// <summary>
@@ -61,12 +61,12 @@ namespace SampleAirMonitor.MyModel.Internal
         {
             if (!_connection.IsConnected)
             {
-                Logger.LogVerbose(ModuleName, "Not connected — dropping binary command");
+               // Logger.LogVerbose(ModuleName, "Not connected — dropping binary command");
                 return;
             }
 
             _connection.Send(data);
-            Logger.LogVerbose(ModuleName, $"Binary command sent: {data.Length} bytes");
+            //Logger.LogVerbose(ModuleName, $"Binary command sent: {data.Length} bytes");
         }
 
         public void Dispose()

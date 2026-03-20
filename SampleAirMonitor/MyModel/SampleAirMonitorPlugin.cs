@@ -281,7 +281,7 @@ namespace SampleAirMonitor.MyModel
         private void SendFrequencyCommand(int frequencyHz)
         {
             if (_commandQueue == null || _config == null) return;
-            Debug.WriteLine(ModuleName + $" SendFrequencyCommand({frequencyHz} Hz)");
+            //Debug.WriteLine(ModuleName + $" SendFrequencyCommand({frequencyHz} Hz)");
             if (_config.PluginFreqModeProtocol == Constants.ProtocolCiv)
             {
                 byte[] frame = CivProtocolBuilder.BuildSetFrequency(
@@ -298,7 +298,7 @@ namespace SampleAirMonitor.MyModel
         private void SendModeCommand(string mode)
         {
             if (_commandQueue == null || _config == null) return;
-            Debug.WriteLine(ModuleName + $" SendModeCommand({mode})");
+            //Debug.WriteLine(ModuleName + $" SendModeCommand({mode})");
             if (_config.PluginFreqModeProtocol == Constants.ProtocolCiv)
             {
                 byte[]? frame = CivProtocolBuilder.BuildSetMode(
