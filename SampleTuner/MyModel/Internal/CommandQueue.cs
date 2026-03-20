@@ -104,31 +104,29 @@ namespace SampleTuner.MyModel.Internal
             _pollTimer = new Timer { Interval = _pollingRxMs };
             _pollTimer.Elapsed += OnPollTimerElapsed;
 
-            // Send wake-up sequence and wait for initialization to complete
-            await StartDeviceInitializationAsync();
+            if (Constants.DeviceInitializationEnabled && !SkipDeviceWakeup)
+            {
+                // Send wake-up sequence and wait for initialization to complete
+                await InitializeDeviceAsync();
+            }
+            else
+            {
+                if (SkipDeviceWakeup)
+                    Logger.LogVerbose(ModuleName, "Skipping device initialization (AmpWakeupMode != 1)");
+                else
+                    Logger.LogVerbose(ModuleName, "Device initialization disabled, starting normal polling");
+                _pollTimer?.Start();
+            }
         }
 
         /// <summary>
         /// Sends wake-up commands to initialize the device.
         /// Normal polling begins after receiving the expected response.
-        /// Can be disabled via Constants.DeviceInitializationEnabled.
+        /// Called from StartAsync (mode 1) or WakeupDeviceAsync (mode 2).
         /// </summary>
         /// <returns>Task that completes when device responds.</returns>
-        private async Task StartDeviceInitializationAsync()
+        public async Task InitializeDeviceAsync()
         {
-            if (!Constants.DeviceInitializationEnabled || SkipDeviceWakeup)
-            {
-                // Unsubscribe from DataReceived since we don't need it
-                _connection.DataReceived -= OnDataReceived;
-                _isInitialized = true;
-                if (SkipDeviceWakeup)
-                    Logger.LogVerbose(ModuleName, "Skipping device initialization (AmpWakeupMode=0)");
-                else
-                    Logger.LogVerbose(ModuleName, "Device initialization disabled, starting normal polling immediately");
-                _pollTimer?.Start();
-                return;
-            }
-
             _isInitialized = false;
             _initializationInProgress = true;
             _initCompletionSource = new TaskCompletionSource<bool>();

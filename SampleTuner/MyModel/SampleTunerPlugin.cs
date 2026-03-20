@@ -233,14 +233,14 @@ namespace SampleTuner.MyModel
 
         #region IDevicePlugin Wakeup/Shutdown
 
-        public Task WakeupDeviceAsync()
+        public async Task WakeupDeviceAsync()
         {
             if (_connection?.IsConnected == true)
             {
-                _connection.Send(Constants.WakeUpCmd);
-                Logger.LogInfo(ModuleName, "WakeupDeviceAsync: sent WakeUpCmd");
+                Logger.LogInfo(ModuleName, "WakeupDeviceAsync: starting device initialization");
+                if (_commandQueue != null)
+                    await _commandQueue.InitializeDeviceAsync();
             }
-            return Task.CompletedTask;
         }
 
         public Task ShutdownDeviceAsync()
