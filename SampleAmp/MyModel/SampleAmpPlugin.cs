@@ -78,6 +78,12 @@ namespace SampleAmp.MyModel
         public event EventHandler<PluginConnectionStateChangedEventArgs>? ConnectionStateChanged;
         public event EventHandler<MeterDataEventArgs>? MeterDataAvailable;
 
+        /// <summary>
+        /// Raise when data has changed.
+        /// Bridge subscribes to push /device WebSocket updates on change instead of polling.
+        /// </summary>
+        public event EventHandler? DeviceDataChanged;
+
         #endregion
 
         #region IAmplifierPlugin
