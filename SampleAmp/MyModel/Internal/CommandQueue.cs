@@ -237,7 +237,7 @@ namespace SampleAmp.MyModel.Internal
                     _pttInProgress = false;
                     _waitingForTxAck = false;
 
-                    sendNowCommand = Constants.PttOffCmd + Constants.ClearFaultCmd;
+                    sendNowCommand = Constants.PttOffCmd;
 
                     // Send RX command immediately for lowest latency
                     _connection.Send(sendNowCommand);
