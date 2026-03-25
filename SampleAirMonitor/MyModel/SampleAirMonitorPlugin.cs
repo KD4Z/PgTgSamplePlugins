@@ -8,6 +8,7 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using Timer = System.Timers.Timer;
 
 namespace SampleAirMonitor.MyModel
 {
@@ -58,6 +59,16 @@ namespace SampleAirMonitor.MyModel
 
         private bool _stopped;
         private bool _disposed;
+        private bool _clientsConnected;
+        private Timer? _resendTimer;
+
+        private const int ResendIntervalMs = 15_000;
+
+        /// <summary>
+        /// True when the Bridge has reported one or more SDR clients connected.
+        /// Drives the periodic frequency/mode resend timer.
+        /// </summary>
+        public bool ClientsConnected => _clientsConnected;
 
         #region IDevicePlugin
 
@@ -172,6 +183,9 @@ namespace SampleAirMonitor.MyModel
 
             Logger.LogInfo(ModuleName, "Stopping plugin");
 
+            // Stop resend timer (CLAUDE.md teardown order: -= handler, Stop, Dispose, null)
+            StopResendTimer();
+
             // Stop command queue
             _commandQueue?.Stop();
 
@@ -206,6 +220,9 @@ namespace SampleAirMonitor.MyModel
                     Logger.LogError(ModuleName, $"Error in StopAsync during Dispose: {ex.Message}");
                 }
             }
+
+            // Ensure resend timer is torn down (guards against Dispose without prior Stop)
+            StopResendTimer();
 
             _commandQueue?.Dispose();
 
@@ -277,6 +294,62 @@ namespace SampleAirMonitor.MyModel
             if (!_statusTracker.SetTransmitMode(mode)) return;
 
             SendModeCommand(mode);
+        }
+
+        /// <summary>
+        /// Called by the Bridge when the SDR connected-clients count transitions between zero and non-zero.
+        /// Starts the periodic frequency/mode resend timer when clients are present; stops it when none remain.
+        /// </summary>
+        public void SetClientsConnected(bool connected)
+        {
+            _clientsConnected = connected;
+
+            if (connected)
+                StartResendTimer();
+            else
+                StopResendTimer();
+        }
+
+        public void SetAmpWakeup(bool active)
+        {
+            // Not implemented in this sample.
+        }
+
+        #endregion
+
+        #region Resend Timer
+
+        private void StartResendTimer()
+        {
+            if (_resendTimer != null) return; // already running
+
+            _resendTimer = new Timer(ResendIntervalMs) { AutoReset = true };
+            _resendTimer.Elapsed += OnResendTimerElapsed;
+            _resendTimer.Start();
+            Logger.LogVerbose(ModuleName, $"Resend timer started ({ResendIntervalMs / 1000}s interval)");
+        }
+
+        private void StopResendTimer()
+        {
+            if (_resendTimer == null) return;
+
+            // CLAUDE.md teardown order: -= handler, Stop, Dispose, null
+            _resendTimer.Elapsed -= OnResendTimerElapsed;
+            _resendTimer.Stop();
+            _resendTimer.Dispose();
+            _resendTimer = null;
+            Logger.LogVerbose(ModuleName, "Resend timer stopped");
+        }
+
+        private void OnResendTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
+        {
+            if (_statusTracker == null || !_clientsConnected) return;
+
+            if (_statusTracker.FrequencyHz > 0)
+                SendFrequencyCommand(_statusTracker.FrequencyHz);
+
+            if (!string.IsNullOrEmpty(_statusTracker.TransmitMode))
+                SendModeCommand(_statusTracker.TransmitMode);
         }
 
         #endregion
