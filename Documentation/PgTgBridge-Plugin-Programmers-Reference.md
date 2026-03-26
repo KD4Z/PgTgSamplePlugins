@@ -144,6 +144,15 @@ public interface IDevicePlugin : IDisposable
     // Events
     event EventHandler<PluginConnectionStateChangedEventArgs>? ConnectionStateChanged;
     event EventHandler<MeterDataEventArgs>? MeterDataAvailable;
+    event EventHandler? DeviceDataChanged;
+
+    // Device data and control (default interface methods — override as needed)
+    double MeterDisplayMaxPower { get; }
+    Task WakeupDeviceAsync() => Task.CompletedTask;
+    Task ShutdownDeviceAsync() => Task.CompletedTask;
+    Dictionary<string, object> GetDeviceData() => new();
+    bool SendDeviceCommand(string command) => false;
+    DeviceControlDefinition? GetDeviceControlDefinition() => null;
 }
 ```
 
@@ -207,65 +216,6 @@ public enum PluginCapability
     AmplifierAndTuner = Amplifier | Tuner  // For combined devices
 }
 ```
-
----
-
-## Declaring UI Requirements (`UiSections`)
-
-### Purpose
-
-`PluginManagerForm` shows different groups of controls depending on what a plugin needs (TCP fields, serial port selector, Wake-on-LAN, GPIO mapping grid, etc.). Previously, the form hard-coded these decisions per plugin ID. Now every plugin declares what it needs and the form becomes a data-driven renderer — adding a new plugin requires **zero changes** to the form.
-
-### The `PluginUiSection` Enum
-
-| Flag | Controls shown | Use when |
-|------|---------------|----------|
-| `Tcp` | TCP radio button, IP address, port | Plugin connects via TCP |
-| `Serial` | Serial radio button, COM port dropdown | Plugin supports serial |
-| `Reconnect` | Reconnect delay field | Plugin auto-reconnects (pair with `Tcp` or `Serial`) |
-| `Wol` | Wake-on-LAN checkbox, MAC address, Test button | Plugin can wake device via WOL (TCP only) |
-| `TcpMultiplex` | TCP Multiplex Server enable + listen port | Plugin exposes a TCP multiplexer |
-| `GpioAction` | GPIO output action mapping grid | Plugin controls GPIO pins |
-| `Protocol` | CAT / CI-V frequency mode selector | Plugin uses radio frequency/mode data |
-
-Flags are bitwise — combine with `|` to enable multiple sections.
-
-### How to Declare
-
-Set `UiSections` in **both** your `[PluginInfo]` attribute and your `Info` property initializer:
-
-```csharp
-[PluginInfo("mycompany.mydevice", "My Device",
-    Version = "1.0.0",
-    Manufacturer = "My Company",
-    Capability = PluginCapability.Amplifier,
-    Description = "My amplifier plugin",
-    UiSections = PluginUiSection.Tcp | PluginUiSection.Serial | PluginUiSection.Reconnect)]
-public class MyDevicePlugin : IAmplifierPlugin
-{
-    public PluginInfo Info { get; } = new PluginInfo
-    {
-        Id = "mycompany.mydevice",
-        // ...
-        UiSections = PluginUiSection.Tcp | PluginUiSection.Serial | PluginUiSection.Reconnect
-    };
-}
-```
-
-### Combination Examples
-
-| Scenario | UiSections |
-|----------|-----------|
-| TCP-only amplifier (e.g., KPA1500) | `Tcp \| Reconnect \| Wol \| TcpMultiplex \| Protocol` |
-| TCP+Serial amplifier/tuner (e.g., KPA500, KAT500) | `Tcp \| Serial \| Reconnect` |
-| GPIO output controller (e.g., PiGpio) | `Tcp \| Reconnect \| GpioAction` |
-| Frequency monitor with protocol selector (e.g., AirMonitor) | `Tcp \| Serial \| Reconnect \| Protocol` |
-
-### Backward Compatibility
-
-If a plugin does **not** declare `UiSections` (i.e., leaves it at the default `PluginUiSection.None`), `PluginManagerForm` falls back to deriving visibility from the legacy `TcpSupported` / `SerialSupported` / `WolSupported` flags and the `Capability` bits. This ensures older external plugins continue to work without modification.
-
-> **Best practice:** Always declare `UiSections` explicitly. The fallback path exists only for pre-existing plugins that have not yet been updated.
 
 ---
 
@@ -633,6 +583,103 @@ private void OnConnectionStateChanged(PluginConnectionState newState)
         new PluginConnectionStateChangedEventArgs(previous, newState));
 }
 ```
+
+---
+
+## Device Control Panel Integration
+
+External plugins can define their own LED indicators in the Device Control dashboard by implementing `GetDeviceControlDefinition()`. The Controller dynamically renders these definitions at runtime — no hard-coded UI changes needed.
+
+### Overview
+
+1. Plugin implements `GetDeviceControlDefinition()` returning a `DeviceControlDefinition`
+2. Plugin implements `GetDeviceData()` returning a dictionary whose keys match the definition's `ResponseKey` values
+3. Plugin implements `SendDeviceCommand(string)` to handle commands sent from clicked LEDs
+4. Plugin fires `DeviceDataChanged` when any value returned by `GetDeviceData()` changes
+
+On WebSocket connect, the service sends the definitions to the Controller, which renders LED indicators dynamically.
+
+### DeviceControlElement Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `ActiveColor` | `string` | LED color when active: `"green"`, `"yellow"`, `"red"`, `"gray"` |
+| `InactiveColor` | `string` | LED color when inactive |
+| `ActiveText` | `string` | Label text when active (e.g., `"Operate"`) |
+| `InactiveText` | `string` | Label text when inactive (e.g., `"Standby"`) |
+| `ActiveCommand` | `string?` | Command sent when clicked while active (`null` = no-op) |
+| `InactiveCommand` | `string?` | Command sent when clicked while inactive (`null` = no-op) |
+| `ResponseKey` | `string` | Key in `GetDeviceData()` dict that drives this element's state |
+| `ActiveValue` | `string` | Value (case-insensitive string compare) that means "active" |
+| `IsClickable` | `bool` | Whether the LED responds to clicks |
+
+### DeviceControlDefinition
+
+A wrapper containing `List<DeviceControlElement> Elements`, rendered left-to-right in order.
+
+### Data Flow
+
+```
+Plugin defines UI          Controller renders dynamically
+       │                              │
+GetDeviceControlDefinition()   ──────►  Build LED controls from definition
+       │                              │
+GetDeviceData()  ──────────────────►  Compare ResponseKey values to ActiveValue
+       │                              │  → set LED color + label text
+DeviceDataChanged event  ──────────►  Push updated data via WebSocket
+       │                              │
+                          ◄──────────  User clicks LED
+SendDeviceCommand(cmd)                  → send ActiveCommand or InactiveCommand
+```
+
+### Color Reference
+
+| Color String | Description |
+|-------------|-------------|
+| `"green"` | Active/on state (RGB: 0, 192, 0) |
+| `"yellow"` | Warning/standby state (RGB: 255, 255, 0) |
+| `"red"` | Fault/alarm state (RGB: 255, 0, 0) |
+| `"gray"` | Inactive/off state (RGB: 128, 128, 128) |
+
+### Complete Example
+
+```csharp
+public DeviceControlDefinition? GetDeviceControlDefinition()
+{
+    return new DeviceControlDefinition
+    {
+        Elements = new List<DeviceControlElement>
+        {
+            new DeviceControlElement
+            {
+                ActiveColor = "green", InactiveColor = "gray",
+                ActiveText = "Power On", InactiveText = "Power Off",
+                ActiveCommand = "$ON0;", InactiveCommand = "$ON1;",
+                ResponseKey = "ON", ActiveValue = "1",
+                IsClickable = true
+            },
+            new DeviceControlElement
+            {
+                ActiveColor = "green", InactiveColor = "yellow",
+                ActiveText = "Operate", InactiveText = "Standby",
+                ActiveCommand = "$OS0;", InactiveCommand = "$OS1;",
+                ResponseKey = "OS", ActiveValue = "1",
+                IsClickable = true
+            },
+            new DeviceControlElement
+            {
+                ActiveColor = "red", InactiveColor = "gray",
+                ActiveText = "FAULT", InactiveText = "No Fault",
+                ActiveCommand = "$FLC;", InactiveCommand = null,
+                ResponseKey = "FL", ActiveValue = "1",
+                IsClickable = true
+            }
+        }
+    };
+}
+```
+
+Every `ResponseKey` used in the definition **must** also appear in the dictionary returned by `GetDeviceData()`, and the plugin **must** fire `DeviceDataChanged` when those values change.
 
 ---
 
@@ -3121,9 +3168,9 @@ For external plugin development, the sample projects under `PgTgSamplePlugins/` 
 
 | Plugin | Interface | Key Patterns Demonstrated |
 |--------|-----------|--------------------------|
-| `SampleAmp/MyModel/` | `IAmplifierPlugin` | TCP+Serial via `IConnection`, PTT watchdog, device init enabled |
-| `SampleTuner/MyModel/` | `ITunerPlugin` | TCP+Serial via `IConnection`, tune timeout, device init disabled |
-| `SampleAmpTuner/MyModel/` | `IAmplifierTunerPlugin` | Combined amp+tuner state, both amp and tuner change detection |
+| `SampleAmp/MyModel/` | `IAmplifierPlugin` | TCP+Serial via `IConnection`, PTT watchdog, device init enabled, Device Control definitions |
+| `SampleTuner/MyModel/` | `ITunerPlugin` | TCP+Serial via `IConnection`, tune timeout, device init disabled, Device Control definitions |
+| `SampleAmpTuner/MyModel/` | `IAmplifierTunerPlugin` | Combined amp+tuner state, both amp and tuner change detection, Device Control definitions |
 
 Each sample's `Internal/` folder contains the full set of 7 component files (`IConnection`, `TcpConnection`, `SerialConnection`, `Constants`, `CommandQueue`, `ResponseParser`, `StatusTracker`) with annotated source demonstrating every pattern described in this document.
 
@@ -3144,6 +3191,7 @@ When creating a new plugin:
 - [ ] Register in `PluginFactory` (for built-in plugins)
 - [ ] Add unit and integration tests
 - [ ] Test PTT interlock timing thoroughly
+- [ ] Implement `GetDeviceControlDefinition()` for Device Control panel UI
 
 ---
 ## Key Architecture Changes
@@ -3174,6 +3222,7 @@ Radio sends PTT_REQUESTED → InterlockBase detects it → Bridge sends to plugi
 |---------|------|---------|
 | 1.0 | December 2025 | Initial plugin architecture release |
 | 1.1 | March 2026 | Phase 4 doc update: MyModel/Internal architecture pattern, $-prefix protocol reference, multi-transport guidance, timer disposal order fix, sample project file trees, LogLudicrous → LogVerbose |
+| 1.2 | March 2026 | Device Control panel integration for external plugins: `GetDeviceControlDefinition()`, dynamic LED rendering, `DeviceControlElement`/`DeviceControlDefinition` types |
 
 ---
 
