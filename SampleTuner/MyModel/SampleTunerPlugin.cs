@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -328,6 +329,8 @@ namespace SampleTuner.MyModel
 
             // Apply to status tracker
             bool hadTunerChange = update.TunerStateChanged || update.TuningStateChanged || update.TunerRelaysChanged;
+            bool hadDeviceDataChange = update.TunerStateChanged || update.FaultCode.HasValue
+                || update.BandNumber.HasValue || update.Antenna.HasValue;
 
             _statusTracker.ApplyUpdate(update);
 
@@ -352,6 +355,10 @@ namespace SampleTuner.MyModel
                 Debug.WriteLine("Tuner Status change detected--raising TunerStatusChanged");
                 TunerStatusChanged?.Invoke(this, new TunerStatusEventArgs(tunerStatus, PluginId));
             }
+
+            // Raise device data changed event for Device Control panel updates
+            if (hadDeviceDataChange)
+                DeviceDataChanged?.Invoke(this, EventArgs.Empty);
 
             // Raise meter data event on every data received
             RaiseMeterDataEvent();
@@ -380,6 +387,96 @@ namespace SampleTuner.MyModel
             bool isTuning = _statusTracker.TuningState == TunerTuningState.TuningInProgress;
             var args = new MeterDataEventArgs(readings, isTuning, PluginId);
             MeterDataAvailable?.Invoke(this, args);
+        }
+
+        #endregion
+
+        #region IDevicePlugin Device Control
+
+        public Dictionary<string, object> GetDeviceData()
+        {
+            return _statusTracker?.GetDeviceData() ?? new Dictionary<string, object>();
+        }
+
+        public bool SendDeviceCommand(string command)
+        {
+            if (_connection == null || !_connection.IsConnected) return false;
+            _connection.Send(command);
+            return true;
+        }
+
+        public DeviceControlDefinition? GetDeviceControlDefinition()
+        {
+            return new DeviceControlDefinition
+            {
+                Elements = new List<DeviceControlElement>
+                {
+                    new DeviceControlElement
+                    {
+                        ActiveColor = "green", InactiveColor = "gray",
+                        ActiveText = "Power On", InactiveText = "Power Off",
+                        ActiveCommand = "$PS0;", InactiveCommand = "$PS1;",
+                        ResponseKey = "PS", ActiveValue = "1",
+                        IsClickable = true
+                    },
+                    new DeviceControlElement
+                    {
+                        ActiveColor = "green", InactiveColor = "gray",
+                        ActiveText = "Auto", InactiveText = "Auto",
+                        ActiveCommand = null, InactiveCommand = null,
+                        ResponseKey = "MD", ActiveValue = "A",
+                        IsClickable = false
+                    },
+                    new DeviceControlElement
+                    {
+                        ActiveColor = "green", InactiveColor = "gray",
+                        ActiveText = "Manual", InactiveText = "Manual",
+                        ActiveCommand = null, InactiveCommand = null,
+                        ResponseKey = "MD", ActiveValue = "M",
+                        IsClickable = false
+                    },
+                    new DeviceControlElement
+                    {
+                        ActiveColor = "yellow", InactiveColor = "gray",
+                        ActiveText = "Bypass", InactiveText = "Bypass",
+                        ActiveCommand = null, InactiveCommand = null,
+                        ResponseKey = "MD", ActiveValue = "B",
+                        IsClickable = false
+                    },
+                    new DeviceControlElement
+                    {
+                        ActiveColor = "green", InactiveColor = "gray",
+                        ActiveText = "Ant 1", InactiveText = "Ant 1",
+                        ActiveCommand = "$AN1;", InactiveCommand = "$AN1;",
+                        ResponseKey = "AN", ActiveValue = "1",
+                        IsClickable = true
+                    },
+                    new DeviceControlElement
+                    {
+                        ActiveColor = "green", InactiveColor = "gray",
+                        ActiveText = "Ant 2", InactiveText = "Ant 2",
+                        ActiveCommand = "$AN2;", InactiveCommand = "$AN2;",
+                        ResponseKey = "AN", ActiveValue = "2",
+                        IsClickable = true
+                    },
+                    new DeviceControlElement
+                    {
+                        ActiveColor = "green", InactiveColor = "gray",
+                        ActiveText = "Ant 3", InactiveText = "Ant 3",
+                        ActiveCommand = "$AN3;", InactiveCommand = "$AN3;",
+                        ResponseKey = "AN", ActiveValue = "3",
+                        IsClickable = true
+                    },
+                    new DeviceControlElement
+                    {
+                        ActiveColor = "red", InactiveColor = "gray",
+                        ActiveText = "FAULT", InactiveText = "No Fault",
+                        ActiveCommand = "$FLC;", InactiveCommand = null,
+                        ResponseKey = "FLT", ActiveValue = "1",
+                        IsClickable = true
+                    }
+                }
+            };
         }
 
         #endregion

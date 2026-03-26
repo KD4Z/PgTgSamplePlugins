@@ -108,6 +108,31 @@ namespace SampleTuner.MyModel.Internal
         }
 
         /// <summary>
+        /// Get device data for the /device WebSocket endpoint and Device Control panel.
+        /// </summary>
+        public Dictionary<string, object> GetDeviceData()
+        {
+            lock (_lock)
+            {
+                string mode = TunerState switch
+                {
+                    TunerOperateState.Inline => "A",
+                    TunerOperateState.Bypass => "B",
+                    _ => "M"
+                };
+
+                return new Dictionary<string, object>
+                {
+                    ["PS"] = TunerState != TunerOperateState.Unknown ? 1 : 0,
+                    ["MD"] = mode,
+                    ["AN"] = Antenna,
+                    ["FLT"] = FaultCode > 0 ? 1 : 0,
+                    ["BN"] = BandNumber
+                };
+            }
+        }
+
+        /// <summary>
         /// Zero meter values (for shutdown or tune cycle completion).
         /// </summary>
         public void ZeroMeterValues()

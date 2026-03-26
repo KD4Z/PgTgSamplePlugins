@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using PgTg.AMP;
@@ -337,6 +338,7 @@ namespace SampleAmp.MyModel
 
             // Apply to status tracker
             bool hadAmpChange = update.AmpStateChanged || update.PttStateChanged || update.PttReady;
+            bool hadDeviceDataChange = update.AmpStateChanged || update.FaultCode.HasValue || update.BandNumber.HasValue;
 
             _statusTracker.ApplyUpdate(update);
 
@@ -353,6 +355,10 @@ namespace SampleAmp.MyModel
                 ampStatus.WhatChanged = DetermineAmpChange(update);
                 StatusChanged?.Invoke(this, new AmplifierStatusEventArgs(ampStatus, PluginId));
             }
+
+            // Raise device data changed event for Device Control panel updates
+            if (hadDeviceDataChange)
+                DeviceDataChanged?.Invoke(this, EventArgs.Empty);
 
             // Raise meter data event on every status update from the device
             RaiseMeterDataEvent();
@@ -381,6 +387,56 @@ namespace SampleAmp.MyModel
             bool isTransmitting = _statusTracker.IsPtt || _statusTracker.RadioPtt;
             var args = new MeterDataEventArgs(readings, isTransmitting, PluginId);
             MeterDataAvailable?.Invoke(this, args);
+        }
+
+        #endregion
+
+        #region IDevicePlugin Device Control
+
+        public Dictionary<string, object> GetDeviceData()
+        {
+            return _statusTracker?.GetDeviceData() ?? new Dictionary<string, object>();
+        }
+
+        public bool SendDeviceCommand(string command)
+        {
+            if (_connection == null || !_connection.IsConnected) return false;
+            _connection.Send(command);
+            return true;
+        }
+
+        public DeviceControlDefinition? GetDeviceControlDefinition()
+        {
+            return new DeviceControlDefinition
+            {
+                Elements = new List<DeviceControlElement>
+                {
+                    new DeviceControlElement
+                    {
+                        ActiveColor = "green", InactiveColor = "gray",
+                        ActiveText = "Power On", InactiveText = "Power Off",
+                        ActiveCommand = "$ON0;", InactiveCommand = "$ON1;",
+                        ResponseKey = "ON", ActiveValue = "1",
+                        IsClickable = true
+                    },
+                    new DeviceControlElement
+                    {
+                        ActiveColor = "green", InactiveColor = "yellow",
+                        ActiveText = "Operate", InactiveText = "Standby",
+                        ActiveCommand = "$OS0;", InactiveCommand = "$OS1;",
+                        ResponseKey = "OS", ActiveValue = "1",
+                        IsClickable = true
+                    },
+                    new DeviceControlElement
+                    {
+                        ActiveColor = "red", InactiveColor = "gray",
+                        ActiveText = "FAULT", InactiveText = "No Fault",
+                        ActiveCommand = "$FLC;", InactiveCommand = null,
+                        ResponseKey = "FL", ActiveValue = "1",
+                        IsClickable = true
+                    }
+                }
+            };
         }
 
         #endregion

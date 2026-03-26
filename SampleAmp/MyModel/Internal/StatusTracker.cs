@@ -120,6 +120,23 @@ namespace SampleAmp.MyModel.Internal
         }
 
         /// <summary>
+        /// Get device data for the /device WebSocket endpoint and Device Control panel.
+        /// </summary>
+        public Dictionary<string, object> GetDeviceData()
+        {
+            lock (_lock)
+            {
+                return new Dictionary<string, object>
+                {
+                    ["ON"] = AmpState != AmpOperateState.Unknown && AmpState != AmpOperateState.Standby ? 1 : 0,
+                    ["OS"] = AmpState == AmpOperateState.Operate || AmpState == AmpOperateState.Transmit ? 1 : 0,
+                    ["FL"] = FaultCode > 0 ? 1 : 0,
+                    ["BN"] = BandNumber
+                };
+            }
+        }
+
+        /// <summary>
         /// Zero meter values (for shutdown).
         /// </summary>
         public void ZeroMeterValues()

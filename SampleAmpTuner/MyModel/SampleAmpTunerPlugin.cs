@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using PgTg.AMP;
@@ -373,6 +374,8 @@ namespace SampleAmpTuner.MyModel
             // Determine what changed before applying the update
             bool hadAmpChange = update.AmpStateChanged || update.PttStateChanged || update.PttReady;
             bool hadTunerChange = update.TunerStateChanged || update.TuningStateChanged || update.TunerRelaysChanged;
+            bool hadDeviceDataChange = update.AmpStateChanged || update.TunerStateChanged
+                || update.FaultCode.HasValue || update.BandNumber.HasValue || update.Antenna.HasValue;
 
             // Apply to status tracker
             _statusTracker.ApplyUpdate(update);
@@ -405,6 +408,10 @@ namespace SampleAmpTuner.MyModel
                 TunerStatusChanged?.Invoke(this, new TunerStatusEventArgs(tunerStatus, PluginId));
             }
 
+            // Raise device data changed event for Device Control panel updates
+            if (hadDeviceDataChange)
+                DeviceDataChanged?.Invoke(this, EventArgs.Empty);
+
             // Raise meter data event on every status update from the device
             RaiseMeterDataEvent();
         }
@@ -432,6 +439,80 @@ namespace SampleAmpTuner.MyModel
             bool isTransmitting = _statusTracker.IsPtt || _statusTracker.RadioPtt;
             var args = new MeterDataEventArgs(readings, isTransmitting, PluginId);
             MeterDataAvailable?.Invoke(this, args);
+        }
+
+        #endregion
+
+        #region IDevicePlugin Device Control
+
+        public Dictionary<string, object> GetDeviceData()
+        {
+            return _statusTracker?.GetDeviceData() ?? new Dictionary<string, object>();
+        }
+
+        public bool SendDeviceCommand(string command)
+        {
+            if (_connection == null || !_connection.IsConnected) return false;
+            _connection.Send(command);
+            return true;
+        }
+
+        public DeviceControlDefinition? GetDeviceControlDefinition()
+        {
+            return new DeviceControlDefinition
+            {
+                Elements = new List<DeviceControlElement>
+                {
+                    new DeviceControlElement
+                    {
+                        ActiveColor = "green", InactiveColor = "gray",
+                        ActiveText = "Power On", InactiveText = "Power Off",
+                        ActiveCommand = "$ON0;", InactiveCommand = "$ON1;",
+                        ResponseKey = "ON", ActiveValue = "1",
+                        IsClickable = true
+                    },
+                    new DeviceControlElement
+                    {
+                        ActiveColor = "green", InactiveColor = "yellow",
+                        ActiveText = "Operate", InactiveText = "Standby",
+                        ActiveCommand = "$OS0;", InactiveCommand = "$OS1;",
+                        ResponseKey = "OS", ActiveValue = "1",
+                        IsClickable = true
+                    },
+                    new DeviceControlElement
+                    {
+                        ActiveColor = "green", InactiveColor = "gray",
+                        ActiveText = "Ant 1", InactiveText = "Ant 1",
+                        ActiveCommand = "$AN1;", InactiveCommand = "$AN1;",
+                        ResponseKey = "AN", ActiveValue = "1",
+                        IsClickable = true
+                    },
+                    new DeviceControlElement
+                    {
+                        ActiveColor = "green", InactiveColor = "gray",
+                        ActiveText = "Ant 2", InactiveText = "Ant 2",
+                        ActiveCommand = "$AN2;", InactiveCommand = "$AN2;",
+                        ResponseKey = "AN", ActiveValue = "2",
+                        IsClickable = true
+                    },
+                    new DeviceControlElement
+                    {
+                        ActiveColor = "green", InactiveColor = "yellow",
+                        ActiveText = "ATU Inline", InactiveText = "ATU Bypass",
+                        ActiveCommand = "$AI0;", InactiveCommand = "$AI1;",
+                        ResponseKey = "AI", ActiveValue = "1",
+                        IsClickable = true
+                    },
+                    new DeviceControlElement
+                    {
+                        ActiveColor = "red", InactiveColor = "gray",
+                        ActiveText = "FAULT", InactiveText = "No Fault",
+                        ActiveCommand = "$FLC;", InactiveCommand = null,
+                        ResponseKey = "FL", ActiveValue = "1",
+                        IsClickable = true
+                    }
+                }
+            };
         }
 
         #endregion

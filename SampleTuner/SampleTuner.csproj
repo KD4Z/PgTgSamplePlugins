@@ -20,7 +20,14 @@
     <PackageReference Include="System.IO.Ports" Version="10.0.1" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="Exists('..\..\PgTgEmulator\PgTg\PgTg.csproj')">
+    <ProjectReference Include="..\..\PgTgEmulator\PgTg\PgTg.csproj">
+      <Private>false</Private>
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </ProjectReference>
+  </ItemGroup>
+
+  <ItemGroup Condition="!Exists('..\..\PgTgEmulator\PgTg\PgTg.csproj')">
     <Reference Include="PgTg">
       <HintPath>C:\Program Files\PgTgBridge\bin\PgTg.dll</HintPath>
     </Reference>
