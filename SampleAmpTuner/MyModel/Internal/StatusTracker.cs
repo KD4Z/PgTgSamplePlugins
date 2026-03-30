@@ -38,6 +38,15 @@ namespace SampleAmpTuner.MyModel.Internal
         public string BandName { get; private set; } = string.Empty;
         public int FaultCode { get; private set; }
         public string SerialNumber { get; private set; } = string.Empty;
+
+        public static string GetFaultDescription(int faultCode) => faultCode switch
+        {
+            0 => string.Empty,
+            1 => "RF overload",
+            2 => "Temperature fault",
+            3 => "Power supply fault",
+            _ => $"Fault (code {faultCode})"
+        };
         public double FirmwareVersion { get; private set; }
         public bool IsVitaDataPopulated { get; private set; }
 
@@ -185,6 +194,7 @@ namespace SampleAmpTuner.MyModel.Internal
                     ["AN"] = Antenna,
                     ["AI"] = TunerState == TunerOperateState.Inline ? 1 : 0,
                     ["FL"] = FaultCode > 0 ? 1 : 0,
+                    ["FaultDesc"] = GetFaultDescription(FaultCode),
                     ["BN"] = BandNumber
                 };
             }

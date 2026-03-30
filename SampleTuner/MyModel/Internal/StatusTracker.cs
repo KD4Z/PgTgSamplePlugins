@@ -31,6 +31,15 @@ namespace SampleTuner.MyModel.Internal
         public double VFWD { get; set; }
         public int FaultCode { get; private set; }
         public bool RadioPtt { get; private set; }
+
+        public static string GetFaultDescription(int faultCode) => faultCode switch
+        {
+            0 => string.Empty,
+            1 => "RF overload",
+            2 => "Temperature fault",
+            3 => "Power supply fault",
+            _ => $"Fault (code {faultCode})"
+        };
         public string SerialNumber { get; private set; } = string.Empty;
         public double FirmwareVersion { get; private set; }
         public bool IsVitaDataPopulated { get; private set; }
@@ -139,6 +148,7 @@ namespace SampleTuner.MyModel.Internal
                     // "FLT" — Fault LED: 1 = fault active (red), 0 = no fault (gray)
                     //   Populated by $FLT; poll.
                     ["FLT"] = FaultCode > 0 ? 1 : 0,
+                    ["FaultDesc"] = GetFaultDescription(FaultCode),
 
                     ["BN"] = BandNumber
                 };
