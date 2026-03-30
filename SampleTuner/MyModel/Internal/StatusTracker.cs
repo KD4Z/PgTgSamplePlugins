@@ -110,23 +110,36 @@ namespace SampleTuner.MyModel.Internal
         /// <summary>
         /// Get device data for the /device WebSocket endpoint and Device Control panel.
         /// </summary>
+        /// <summary>
+        /// Get device data for the /device WebSocket endpoint and Device Control panel.
+        /// Every key returned here MUST match a ResponseKey in GetDeviceControlDefinition().
+        /// The Controller compares each value (as string, case-insensitive) to the
+        /// ActiveValue of the matching LED to decide whether to show ActiveColor or InactiveColor.
+        /// </summary>
         public Dictionary<string, object> GetDeviceData()
         {
             lock (_lock)
             {
-                string mode = TunerState switch
-                {
-                    TunerOperateState.Inline => "A",
-                    TunerOperateState.Bypass => "B",
-                    _ => "M"
-                };
-
                 return new Dictionary<string, object>
                 {
+                    // "PS" — Power LED: 1 = tuner is on and responding (green), 0 = off (gray)
+                    //   We infer power-on from TunerState: if the tuner is responding with any
+                    //   known state, it is considered powered on.
                     ["PS"] = TunerState != TunerOperateState.Unknown ? 1 : 0,
-                    ["MD"] = mode,
+
+                    // "BYP" — Inline/Bypass LED: 1 = inline (green), 0 = bypass (yellow)
+                    //   Populated by $BYP; poll. BYP response: "N" = not-bypassed (inline),
+                    //   "B" = bypassed.  See ResponseParser.KeyByp case.
+                    ["BYP"] = TunerState == TunerOperateState.Inline ? 1 : 0,
+
+                    // "AN" — Antenna port: integer matching the ActiveValue of each Ant LED
+                    //   Populated by $ANT; poll.  Ant1 LED active when AN == "1", etc.
                     ["AN"] = Antenna,
+
+                    // "FLT" — Fault LED: 1 = fault active (red), 0 = no fault (gray)
+                    //   Populated by $FLT; poll.
                     ["FLT"] = FaultCode > 0 ? 1 : 0,
+
                     ["BN"] = BandNumber
                 };
             }

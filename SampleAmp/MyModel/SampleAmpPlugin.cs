@@ -338,7 +338,8 @@ namespace SampleAmp.MyModel
 
             // Apply to status tracker
             bool hadAmpChange = update.AmpStateChanged || update.PttStateChanged || update.PttReady;
-            bool hadDeviceDataChange = update.AmpStateChanged || update.FaultCode.HasValue || update.BandNumber.HasValue;
+            bool hadDeviceDataChange = update.AmpStateChanged || update.FaultCode.HasValue
+                || update.BandNumber.HasValue || update.Antenna.HasValue;
 
             _statusTracker.ApplyUpdate(update);
 
@@ -405,35 +406,142 @@ namespace SampleAmp.MyModel
             return true;
         }
 
+        /// <summary>
+        /// Returns the LED layout shown in the Device Control window for this plugin.
+        ///
+        /// HOW IT WORKS — three-part data flow:
+        ///   1. The poller in CommandQueue sends the commands in Constants.RxPollCommands on a
+        ///      timer (Constants.PollingRxMs).  Each command triggers a device response.
+        ///   2. ResponseParser turns each response into a StatusUpdate, and StatusTracker stores
+        ///      the resulting state.  StatusTracker.GetDeviceData() exposes those values as a
+        ///      Dictionary keyed by the same short strings used in ResponseKey below.
+        ///   3. When DeviceDataChanged fires, the Controller re-fetches GetDeviceData() and
+        ///      compares each value to the LED's ActiveValue (string, case-insensitive).
+        ///      Match → ActiveColor + ActiveText.  No match → InactiveColor + InactiveText.
+        ///      When the user clicks a LED, SendDeviceCommand() is called with either
+        ///      ActiveCommand (if currently active) or InactiveCommand (if currently inactive).
+        ///
+        /// LED ELEMENT FIELDS:
+        ///   ActiveColor / InactiveColor  — "green" | "yellow" | "red" | "gray"
+        ///   ActiveText  / InactiveText   — label shown inside or beneath the LED
+        ///   ActiveCommand                — raw command string sent when clicked while ACTIVE
+        ///                                  (null = clicking while active does nothing)
+        ///   InactiveCommand              — raw command string sent when clicked while INACTIVE
+        ///                                  (null = clicking while inactive does nothing)
+        ///   ResponseKey                  — key in GetDeviceData() dictionary that feeds this LED
+        ///   ActiveValue                  — value (string) that puts the LED in its active state
+        ///   IsClickable                  — false = display-only indicator, clicks are ignored
+        /// </summary>
         public DeviceControlDefinition? GetDeviceControlDefinition()
         {
             return new DeviceControlDefinition
             {
                 Elements = new List<DeviceControlElement>
                 {
+                    // ---------------------------------------------------------------
+                    // POWER LED
+                    //   ResponseKey "ON" is populated by $ANT; poll → StatusTracker["ON"]
+                    //   Active (green)   = amplifier is powered on  (AmpState != Unknown/Standby)
+                    //   Inactive (gray)  = amplifier is off / not responding
+                    //   Click while ON   → sends $ON0; (power off command)
+                    //   Click while OFF  → sends $ON1; (power on command)
+                    // ---------------------------------------------------------------
                     new DeviceControlElement
                     {
-                        ActiveColor = "green", InactiveColor = "gray",
-                        ActiveText = "Power On", InactiveText = "Power Off",
-                        ActiveCommand = "$ON0;", InactiveCommand = "$ON1;",
-                        ResponseKey = "ON", ActiveValue = "1",
-                        IsClickable = true
+                        ActiveColor    = "green",
+                        InactiveColor  = "gray",
+                        ActiveText     = "Power",
+                        InactiveText   = "Power",
+                        ActiveCommand  = "$ON0;",    // Send to turn device off
+                        InactiveCommand = "$ON1;",   // Send to turn device on
+                        ResponseKey    = "ON",       // Matches GetDeviceData()["ON"]
+                        ActiveValue    = "1",        // GetDeviceData() returns 1 when on
+                        IsClickable    = true
                     },
+
+                    // ---------------------------------------------------------------
+                    // OPERATE / STANDBY LED
+                    //   ResponseKey "OS" populated by $OPR; poll → StatusTracker["OS"]
+                    //   Active (green)   = amplifier in Operate mode
+                    //   Inactive (yellow)= amplifier in Standby mode  (yellow = caution, not fault)
+                    //   Click while in Operate  → sends $OS0; (go to Standby)
+                    //   Click while in Standby  → sends $OS1; (go to Operate)
+                    // ---------------------------------------------------------------
                     new DeviceControlElement
                     {
-                        ActiveColor = "green", InactiveColor = "yellow",
-                        ActiveText = "Operate", InactiveText = "Standby",
-                        ActiveCommand = "$OS0;", InactiveCommand = "$OS1;",
-                        ResponseKey = "OS", ActiveValue = "1",
-                        IsClickable = true
+                        ActiveColor    = "green",
+                        InactiveColor  = "yellow",
+                        ActiveText     = "Operate",
+                        InactiveText   = "Standby",
+                        ActiveCommand  = "$OS0;",    // Go to standby
+                        InactiveCommand = "$OS1;",   // Go to operate
+                        ResponseKey    = "OS",       // Matches GetDeviceData()["OS"]
+                        ActiveValue    = "1",
+                        IsClickable    = true
                     },
+
+                    // ---------------------------------------------------------------
+                    // ANTENNA 1 LED
+                    //   ResponseKey "AN" is populated by $ANT; poll → StatusTracker["AN"]
+                    //   Active (green)   = Antenna 1 is currently selected
+                    //   Inactive (gray)  = another antenna is selected
+                    //   Click (any state)→ sends $AN1; to select antenna 1
+                    //   NOTE: both Ant1 and Ant2 share the same ResponseKey "AN" but each
+                    //         has a different ActiveValue.  Only one can be green at a time.
+                    // ---------------------------------------------------------------
                     new DeviceControlElement
                     {
-                        ActiveColor = "red", InactiveColor = "gray",
-                        ActiveText = "FAULT", InactiveText = "No Fault",
-                        ActiveCommand = "$FLC;", InactiveCommand = null,
-                        ResponseKey = "FL", ActiveValue = "1",
-                        IsClickable = true
+                        ActiveColor    = "green",
+                        InactiveColor  = "gray",
+                        ActiveText     = "Ant 1",
+                        InactiveText   = "Ant 1",
+                        ActiveCommand  = "$AN1;",    // Already on Ant1, re-select (harmless)
+                        InactiveCommand = "$AN1;",   // Switch to Ant1
+                        ResponseKey    = "AN",       // Matches GetDeviceData()["AN"]
+                        ActiveValue    = "1",        // Active when AN == 1
+                        IsClickable    = true
+                    },
+
+                    // ---------------------------------------------------------------
+                    // ANTENNA 2 LED
+                    //   Shares ResponseKey "AN" with Ant1, but ActiveValue = "2"
+                    //   Active (green)   = Antenna 2 is currently selected
+                    //   Inactive (gray)  = another antenna is selected
+                    //   Click (any state)→ sends $AN2; to select antenna 2
+                    // ---------------------------------------------------------------
+                    new DeviceControlElement
+                    {
+                        ActiveColor    = "green",
+                        InactiveColor  = "gray",
+                        ActiveText     = "Ant 2",
+                        InactiveText   = "Ant 2",
+                        ActiveCommand  = "$AN2;",    // Already on Ant2, re-select (harmless)
+                        InactiveCommand = "$AN2;",   // Switch to Ant2
+                        ResponseKey    = "AN",       // Same key as Ant1, different ActiveValue
+                        ActiveValue    = "2",        // Active when AN == 2
+                        IsClickable    = true
+                    },
+
+                    // ---------------------------------------------------------------
+                    // FAULT LED
+                    //   ResponseKey "FL" populated by $FLT; poll → StatusTracker["FL"]
+                    //   Active (red)     = a fault condition is present
+                    //   Inactive (gray)  = no fault
+                    //   Click while ACTIVE   → sends $FLC; (Clear Fault command)
+                    //   Click while INACTIVE → no-op (null command = nothing sent)
+                    //   Tip: set IsClickable = false if your device auto-clears faults
+                    // ---------------------------------------------------------------
+                    new DeviceControlElement
+                    {
+                        ActiveColor    = "red",
+                        InactiveColor  = "gray",
+                        ActiveText     = "FAULT",
+                        InactiveText   = "Fault",
+                        ActiveCommand  = "$FLC;",    // Clear the fault
+                        InactiveCommand = null,      // Nothing to do when no fault
+                        ResponseKey    = "FL",       // Matches GetDeviceData()["FL"]
+                        ActiveValue    = "1",        // Active when fault code > 0
+                        IsClickable    = true
                     }
                 }
             };

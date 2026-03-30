@@ -58,18 +58,19 @@ namespace SampleAmpTuner.MyModel.Internal
         /// </summary>
         public static readonly string[] RxPollCommands =
         {
-            "$PWR;",    // Power/SWR (amp)
-            "$TMP;",    // Temperature (amp)
-            "$OPR;",    // Operate/Standby (amp)
+            "$PWR;",    // Power/SWR (amp) — populates ForwardPower meter
+            "$TMP;",    // Temperature (amp) — populates Temperature meter
+            "$OPR;",    // Operate/Standby (amp) — populates OS LED in Device Control
             "$BND;",    // Band number
             "$VLT;",    // Voltage/Current (amp)
-            "$BYP;",    // Bypass status (tuner)
-            "$TPL;",    // Tune poll (tuner)
-            "$SWR;",    // Current SWR (tuner)
-            "$FPW;",    // Forward power ADC (tuner)
-            "$IND;",    // Inductor relay (tuner)
-            "$CAP;",    // Capacitor relay (tuner)
-            "$FLT;",    // Fault code
+            "$ANT;",    // Antenna selection — populates AN key → Ant1/Ant2 LEDs
+            "$BYP;",    // Bypass/Inline status (tuner) — populates AI key → Inline/Bypass LED
+            "$TPL;",    // Tune poll (0=idle, 1=tuning)
+            "$SWR;",    // Current SWR (tuner) — populates tuner SWR meter
+            "$FPW;",    // Forward power ADC (tuner) — populates tuner power meter
+            "$IND;",    // Inductor relay (tuner, hex)
+            "$CAP;",    // Capacitor relay (tuner, hex)
+            "$FLT;",    // Fault code — populates FL key → Fault LED
         };
 
         /// <summary>

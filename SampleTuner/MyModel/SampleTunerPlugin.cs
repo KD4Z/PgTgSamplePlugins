@@ -405,75 +405,139 @@ namespace SampleTuner.MyModel
             return true;
         }
 
+        /// <summary>
+        /// Returns the LED layout shown in the Device Control window for this plugin.
+        ///
+        /// HOW IT WORKS — three-part data flow:
+        ///   1. The poller in CommandQueue sends the commands in Constants.RxPollCommands on a
+        ///      timer (Constants.PollingRxMs).  Each command triggers a device response.
+        ///   2. ResponseParser turns each response into a StatusUpdate, and StatusTracker stores
+        ///      the resulting state.  StatusTracker.GetDeviceData() exposes those values as a
+        ///      Dictionary keyed by the same short strings used in ResponseKey below.
+        ///   3. When DeviceDataChanged fires, the Controller re-fetches GetDeviceData() and
+        ///      compares each value to the LED's ActiveValue (string, case-insensitive).
+        ///      Match → ActiveColor + ActiveText.  No match → InactiveColor + InactiveText.
+        ///      When the user clicks a LED, SendDeviceCommand() is called with either
+        ///      ActiveCommand (if currently active) or InactiveCommand (if currently inactive).
+        ///
+        /// POLLER COMMANDS that populate these LEDs (see Constants.RxPollCommands):
+        ///   $BYP;  → response "$BYP N;" or "$BYP B;" → StatusTracker["BYP"]
+        ///   $ANT;  → response "$ANT 1;"  or "$ANT 2;" → StatusTracker["AN"]
+        ///   $FLT;  → response "$FLT n;"               → StatusTracker["FLT"]
+        /// </summary>
         public DeviceControlDefinition? GetDeviceControlDefinition()
         {
             return new DeviceControlDefinition
             {
                 Elements = new List<DeviceControlElement>
                 {
+                    // ---------------------------------------------------------------
+                    // POWER LED
+                    //   ResponseKey "PS" populated by deriving from TunerState in
+                    //   StatusTracker.GetDeviceData(): 1 when tuner is responding, 0 otherwise.
+                    //   Active (green)   = tuner is powered on and communicating
+                    //   Inactive (gray)  = tuner is off or not yet connected
+                    //   Click while ON   → sends $PS0; (power off)
+                    //   Click while OFF  → sends $PS1; (power on)
+                    // ---------------------------------------------------------------
                     new DeviceControlElement
                     {
-                        ActiveColor = "green", InactiveColor = "gray",
-                        ActiveText = "Power On", InactiveText = "Power Off",
-                        ActiveCommand = "$PS0;", InactiveCommand = "$PS1;",
-                        ResponseKey = "PS", ActiveValue = "1",
-                        IsClickable = true
+                        ActiveColor    = "green",
+                        InactiveColor  = "gray",
+                        ActiveText     = "Power",
+                        InactiveText   = "Power",
+                        ActiveCommand  = "$PS0;",    // Send to power off
+                        InactiveCommand = "$PS1;",   // Send to power on
+                        ResponseKey    = "PS",       // Matches GetDeviceData()["PS"]
+                        ActiveValue    = "1",        // 1 = powered on
+                        IsClickable    = true
                     },
+
+                    // ---------------------------------------------------------------
+                    // INLINE / BYPASS LED
+                    //   ResponseKey "BYP" populated by $BYP; poll.
+                    //   Device response: "$BYP N;" = inline (not bypassed)
+                    //                   "$BYP B;" = bypassed
+                    //   Active (green)   = tuner is inline (actively matching)
+                    //   Inactive (yellow)= tuner is bypassed (pass-through)
+                    //   Click while INLINE  → sends $BYPB; (go to bypass)
+                    //   Click while BYPASS  → sends $BYPN; (go to inline / not-bypassed)
+                    // ---------------------------------------------------------------
                     new DeviceControlElement
                     {
-                        ActiveColor = "green", InactiveColor = "gray",
-                        ActiveText = "Auto", InactiveText = "Auto",
-                        ActiveCommand = null, InactiveCommand = null,
-                        ResponseKey = "MD", ActiveValue = "A",
-                        IsClickable = false
+                        ActiveColor    = "green",
+                        InactiveColor  = "yellow",
+                        ActiveText     = "Inline",
+                        InactiveText   = "Bypass",
+                        ActiveCommand  = "$BYPB;",   // Currently inline → go to bypass
+                        InactiveCommand = "$BYPN;",  // Currently bypassed → go inline
+                        ResponseKey    = "BYP",      // Matches GetDeviceData()["BYP"]
+                        ActiveValue    = "1",        // 1 = inline
+                        IsClickable    = true
                     },
+
+                    // ---------------------------------------------------------------
+                    // ANTENNA 1 LED
+                    //   ResponseKey "AN" populated by $ANT; poll.
+                    //   Device response: "$ANT 1;" sets AN = 1, "$ANT 2;" sets AN = 2.
+                    //   Active (green)   = Antenna 1 is currently selected
+                    //   Inactive (gray)  = another antenna is selected
+                    //   Click (any state)→ sends $ANT 1; to select antenna 1
+                    //   NOTE: Ant1 and Ant2 share the same ResponseKey "AN" but each has
+                    //         a different ActiveValue — only one can be active at a time.
+                    // ---------------------------------------------------------------
                     new DeviceControlElement
                     {
-                        ActiveColor = "green", InactiveColor = "gray",
-                        ActiveText = "Manual", InactiveText = "Manual",
-                        ActiveCommand = null, InactiveCommand = null,
-                        ResponseKey = "MD", ActiveValue = "M",
-                        IsClickable = false
+                        ActiveColor    = "green",
+                        InactiveColor  = "gray",
+                        ActiveText     = "Ant 1",
+                        InactiveText   = "Ant 1",
+                        ActiveCommand  = "$ANT 1;",  // Already on Ant1, re-select (harmless)
+                        InactiveCommand = "$ANT 1;", // Switch to Ant1
+                        ResponseKey    = "AN",       // Matches GetDeviceData()["AN"]
+                        ActiveValue    = "1",        // Active when AN == 1
+                        IsClickable    = true
                     },
+
+                    // ---------------------------------------------------------------
+                    // ANTENNA 2 LED
+                    //   Shares ResponseKey "AN" with Ant1, but ActiveValue = "2"
+                    //   Active (green)   = Antenna 2 is currently selected
+                    //   Inactive (gray)  = another antenna is selected
+                    //   Click (any state)→ sends $ANT 2; to select antenna 2
+                    // ---------------------------------------------------------------
                     new DeviceControlElement
                     {
-                        ActiveColor = "yellow", InactiveColor = "gray",
-                        ActiveText = "Bypass", InactiveText = "Bypass",
-                        ActiveCommand = null, InactiveCommand = null,
-                        ResponseKey = "MD", ActiveValue = "B",
-                        IsClickable = false
+                        ActiveColor    = "green",
+                        InactiveColor  = "gray",
+                        ActiveText     = "Ant 2",
+                        InactiveText   = "Ant 2",
+                        ActiveCommand  = "$ANT 2;",  // Already on Ant2, re-select (harmless)
+                        InactiveCommand = "$ANT 2;", // Switch to Ant2
+                        ResponseKey    = "AN",       // Same key as Ant1, different ActiveValue
+                        ActiveValue    = "2",        // Active when AN == 2
+                        IsClickable    = true
                     },
+
+                    // ---------------------------------------------------------------
+                    // FAULT LED
+                    //   ResponseKey "FLT" populated by $FLT; poll.
+                    //   Active (red)     = a fault condition is present (FaultCode > 0)
+                    //   Inactive (gray)  = no fault
+                    //   Click while ACTIVE   → sends $FLC; (Clear Fault)
+                    //   Click while INACTIVE → no-op (null = nothing sent)
+                    // ---------------------------------------------------------------
                     new DeviceControlElement
                     {
-                        ActiveColor = "green", InactiveColor = "gray",
-                        ActiveText = "Ant 1", InactiveText = "Ant 1",
-                        ActiveCommand = "$AN1;", InactiveCommand = "$AN1;",
-                        ResponseKey = "AN", ActiveValue = "1",
-                        IsClickable = true
-                    },
-                    new DeviceControlElement
-                    {
-                        ActiveColor = "green", InactiveColor = "gray",
-                        ActiveText = "Ant 2", InactiveText = "Ant 2",
-                        ActiveCommand = "$AN2;", InactiveCommand = "$AN2;",
-                        ResponseKey = "AN", ActiveValue = "2",
-                        IsClickable = true
-                    },
-                    new DeviceControlElement
-                    {
-                        ActiveColor = "green", InactiveColor = "gray",
-                        ActiveText = "Ant 3", InactiveText = "Ant 3",
-                        ActiveCommand = "$AN3;", InactiveCommand = "$AN3;",
-                        ResponseKey = "AN", ActiveValue = "3",
-                        IsClickable = true
-                    },
-                    new DeviceControlElement
-                    {
-                        ActiveColor = "red", InactiveColor = "gray",
-                        ActiveText = "FAULT", InactiveText = "No Fault",
-                        ActiveCommand = "$FLC;", InactiveCommand = null,
-                        ResponseKey = "FLT", ActiveValue = "1",
-                        IsClickable = true
+                        ActiveColor    = "red",
+                        InactiveColor  = "gray",
+                        ActiveText     = "FAULT",
+                        InactiveText   = "Fault",
+                        ActiveCommand  = "$FLC;",    // Clear the fault
+                        InactiveCommand = null,      // Nothing to do when no fault
+                        ResponseKey    = "FLT",      // Matches GetDeviceData()["FLT"]
+                        ActiveValue    = "1",        // Active when FaultCode > 0
+                        IsClickable    = true
                     }
                 }
             };

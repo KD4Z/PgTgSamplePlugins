@@ -40,6 +40,12 @@ namespace SampleAmp.MyModel.Internal
 
         // Fault commands
         public const string ClearFaultCmd = "$FLC;";
+        public const string FaultQueryCmd = "$FLT;";    // Query current fault code
+
+        // Antenna selection commands — sent when user clicks an antenna LED
+        public const string AntennaQueryCmd = "$ANT;";  // Query current antenna (device replies $ANT n;)
+        public const string Antenna1Cmd = "$AN1;";      // Select antenna port 1
+        public const string Antenna2Cmd = "$AN2;";      // Select antenna port 2
 
         // Frequency command prefix (append kHz value, 5 digits, semicolon)
         public const string SetFreqKhzCmdPrefix = "$FRQ";
@@ -53,11 +59,13 @@ namespace SampleAmp.MyModel.Internal
         /// </summary>
         public static readonly string[] RxPollCommands =
         {
-            "$PWR;",    // Power/SWR
-            "$TMP;",    // Temperature
+            "$PWR;",    // Power/SWR — populates ForwardPower meter
+            "$TMP;",    // Temperature — populates Temperature meter
             "$VLT;",    // Voltage/Current
-            "$OPR;",    // Operate/Standby
+            "$OPR;",    // Operate/Standby — populates OS LED in Device Control
             "$BND;",    // Band number
+            "$ANT;",    // Antenna selection — populates AN LED in Device Control
+            "$FLT;",    // Fault code — populates FL LED in Device Control
         };
 
         /// <summary>
@@ -103,6 +111,7 @@ namespace SampleAmp.MyModel.Internal
         public const string KeyFlt = "FLT";     // Fault code
         public const string KeyBnd = "BND";     // Band number
         public const string KeyVlt = "VLT";     // Voltage/Current
+        public const string KeyAnt = "ANT";     // Antenna port (1 or 2)
         public const string KeyVer = "VER";     // Firmware version
         public const string KeySer = "SER";     // Serial number
         public const string KeyIdn = "IDN";     // Device identity

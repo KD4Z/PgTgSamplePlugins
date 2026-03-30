@@ -35,6 +35,9 @@ namespace SampleAmp.MyModel.Internal
             public string? SerialNumber { get; set; }
             public double? FirmwareVersion { get; set; }
 
+            // Device Control state — match the ResponseKey fields in GetDeviceControlDefinition()
+            public int? Antenna { get; set; }   // Antenna port number; maps to ResponseKey "AN"
+
             // Change flags
             public bool AmpStateChanged { get; set; }
             public bool PttStateChanged { get; set; }
@@ -137,6 +140,14 @@ namespace SampleAmp.MyModel.Internal
                         update.BandNumber = band;
                         update.BandName = Constants.LookupBandName(band);
                     }
+                    break;
+
+                case Constants.KeyAnt:
+                    // Response: $ANT n; where n = 1 or 2
+                    // Drives the Ant1 / Ant2 LED indicators in Device Control.
+                    // Only the matching antenna LED lights green; the other shows gray.
+                    if (int.TryParse(value, out int ant))
+                        update.Antenna = ant;
                     break;
 
                 case Constants.KeyFlt:

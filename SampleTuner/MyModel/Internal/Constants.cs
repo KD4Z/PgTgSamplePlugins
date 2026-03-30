@@ -64,15 +64,16 @@ namespace SampleTuner.MyModel.Internal
         /// </summary>
         public static readonly string[] RxPollCommands =
         {
-            "$BYP;",    // Bypass status
-            "$TPL;",    // Tune poll
-            "$SWR;",    // Current SWR
-            "$FPW;",    // Forward power ADC
-            "$IND;",    // Inductor relay
-            "$CAP;",    // Capacitor relay
-            "$MDE;",    // Mode (auto/manual)
+            "$BYP;",    // Bypass/Inline status — populates BYP key → Inline/Bypass LED
+            "$TPL;",    // Tune poll (0=idle, 1=tuning)
+            "$SWR;",    // Current SWR — populates tuner SWR meter
+            "$FPW;",    // Forward power ADC — populates tuner power meter
+            "$IND;",    // Inductor relay (hex)
+            "$CAP;",    // Capacitor relay (hex)
+            "$MDE;",    // Mode (A=auto, M=manual)
+            "$ANT;",    // Antenna selection — populates AN key → Ant1/Ant2 LEDs
             "$BND;",    // Band number
-            "$FLT;",    // Fault code
+            "$FLT;",    // Fault code — populates FLT key → Fault LED
         };
 
         /// <summary>

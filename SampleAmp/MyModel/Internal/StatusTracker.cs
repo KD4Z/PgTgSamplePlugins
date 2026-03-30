@@ -34,6 +34,7 @@ namespace SampleAmp.MyModel.Internal
         public int Temperature { get; private set; }
         public double Voltage { get; private set; }
         public double Current { get; private set; }
+        public int Antenna { get; private set; }       // Current antenna port (1 or 2)
         public int BandNumber { get; private set; }
         public string BandName { get; private set; } = string.Empty;
         public int FaultCode { get; private set; }
@@ -56,6 +57,7 @@ namespace SampleAmp.MyModel.Internal
                 if (update.Temperature.HasValue) Temperature = update.Temperature.Value;
                 if (update.Voltage.HasValue) Voltage = update.Voltage.Value;
                 if (update.Current.HasValue) Current = update.Current.Value;
+                if (update.Antenna.HasValue) Antenna = update.Antenna.Value;
                 if (update.BandNumber.HasValue) BandNumber = update.BandNumber.Value;
                 if (update.BandName != null) BandName = update.BandName;
                 if (update.FaultCode.HasValue) FaultCode = update.FaultCode.Value;
@@ -122,15 +124,33 @@ namespace SampleAmp.MyModel.Internal
         /// <summary>
         /// Get device data for the /device WebSocket endpoint and Device Control panel.
         /// </summary>
+        /// <summary>
+        /// Get device data for the /device WebSocket endpoint and Device Control panel.
+        /// Every key returned here MUST match a ResponseKey in GetDeviceControlDefinition().
+        /// The Controller compares each value (as string, case-insensitive) to the
+        /// ActiveValue of the matching LED to decide whether to show ActiveColor or InactiveColor.
+        /// </summary>
         public Dictionary<string, object> GetDeviceData()
         {
             lock (_lock)
             {
                 return new Dictionary<string, object>
                 {
+                    // "ON" — Power LED: 1 = power on (green), 0 = power off (gray)
                     ["ON"] = AmpState != AmpOperateState.Unknown && AmpState != AmpOperateState.Standby ? 1 : 0,
+
+                    // "OS" — Operate/Standby LED: 1 = operate (green), 0 = standby (yellow)
                     ["OS"] = AmpState == AmpOperateState.Operate || AmpState == AmpOperateState.Transmit ? 1 : 0,
+
+                    // "AN" — Antenna port: integer matching the ActiveValue of each Ant LED
+                    //         Ant1 LED is green when AN == "1", gray otherwise
+                    //         Ant2 LED is green when AN == "2", gray otherwise
+                    ["AN"] = Antenna,
+
+                    // "FL" — Fault LED: 1 = fault active (red), 0 = no fault (gray)
+                    //         Clicking the fault LED when active sends ClearFaultCmd
                     ["FL"] = FaultCode > 0 ? 1 : 0,
+
                     ["BN"] = BandNumber
                 };
             }
