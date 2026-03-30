@@ -34,6 +34,7 @@ namespace SampleTuner.MyModel.Internal
         private bool _disposed;
         private bool _isInitialized;
         private bool _initializationInProgress;
+        private bool _initRetryLogged;
         private TaskCompletionSource<bool>? _initCompletionSource;
 
         // Configuration
@@ -154,7 +155,11 @@ namespace SampleTuner.MyModel.Internal
 
             // Resend identify command
             _connection.Send(Constants.IdentifyCmd);
-            Logger.LogVerbose(ModuleName, $"Resending identify command for device initialization");
+            if (!_initRetryLogged)
+            {
+                Logger.LogVerbose(ModuleName, "Resending identify command for device initialization");
+                _initRetryLogged = true;
+            }
         }
 
         /// <summary>

@@ -27,6 +27,7 @@ namespace SampleAmp.MyModel.Internal
         private int _baudRate = 38400;
         private bool _isRunning;
         private bool _disposed;
+        private bool _sendErrorLogged;
         private readonly StringBuilder _receivedMessage = new();
 
         /// <summary>
@@ -111,16 +112,25 @@ namespace SampleAmp.MyModel.Internal
                     data = "$" + data;
 
                 _serialPort.Write(data);
+                _sendErrorLogged = false;
                 return true;
             }
             catch (InvalidOperationException ex)
             {
-                Logger.LogError(ModuleName, $"Send Error (port not open): {ex.Message}");
+                if (!_sendErrorLogged)
+                {
+                    Logger.LogError(ModuleName, $"Send Error (port not open): {ex.Message}");
+                    _sendErrorLogged = true;
+                }
                 return false;
             }
             catch (TimeoutException ex)
             {
-                Logger.LogError(ModuleName, $"Send Timeout: {ex.Message}");
+                if (!_sendErrorLogged)
+                {
+                    Logger.LogError(ModuleName, $"Send Timeout: {ex.Message}");
+                    _sendErrorLogged = true;
+                }
                 return false;
             }
             catch (Exception ex)
@@ -156,6 +166,7 @@ namespace SampleAmp.MyModel.Internal
                     if (_serialPort.IsOpen)
                     {
                         SetConnectionState(PluginConnectionState.Connected);
+                        _sendErrorLogged = false;
                         Logger.LogInfo(ModuleName, $"Successfully opened {_portName}");
 
                         // Wire up data received event

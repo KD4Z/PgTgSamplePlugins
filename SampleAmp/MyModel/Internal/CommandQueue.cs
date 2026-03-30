@@ -37,6 +37,7 @@ namespace SampleAmp.MyModel.Internal
         private int _currentFrequencyKhz = -1;
         private bool _isInitialized;
         private bool _initializationInProgress;
+        private bool _initRetryLogged;
         private TaskCompletionSource<bool>? _initCompletionSource;
 
         // Configuration
@@ -170,7 +171,11 @@ namespace SampleAmp.MyModel.Internal
 
             // Resend wake-up command to initialize device
             _connection.Send(Constants.WakeUpCmd);
-            Logger.LogVerbose(ModuleName, $"Resending wake-up command for device initialization");
+            if (!_initRetryLogged)
+            {
+                Logger.LogVerbose(ModuleName, "Resending wake-up command for device initialization");
+                _initRetryLogged = true;
+            }
         }
 
         /// <summary>

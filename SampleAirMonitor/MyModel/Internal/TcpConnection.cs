@@ -30,6 +30,7 @@ namespace SampleAirMonitor.MyModel.Internal
         private int _reconnectDelayMs = 5000;
         private bool _isRunning;
         private bool _disposed;
+        private int _logState = 0; // 0 = log, 1 = attempt connect, 2 = failed connect
 
         /// <summary>
         /// Raised when data is received from the device.
@@ -179,6 +180,7 @@ namespace SampleAirMonitor.MyModel.Internal
 
         private async Task ConnectAndListenAsync()
         {
+            _logState = 0;
             while (_isRunning && !_cancellationToken.IsCancellationRequested)
             {
                 try
@@ -189,9 +191,7 @@ namespace SampleAirMonitor.MyModel.Internal
                     {
                         _tcpClient = new TcpClient();
                     }
-#if DEBUG
-                    Logger.LogInfo(ModuleName, $"Attempting to connect to device on {_ipAddress}:{_port}");
-#endif
+
                     await _tcpClient.ConnectAsync(_ipAddress, _port, _cancellationToken);
 
                     if (_tcpClient.Connected)
@@ -199,13 +199,18 @@ namespace SampleAirMonitor.MyModel.Internal
                         SetConnectionState(PluginConnectionState.Connected);
                         Logger.LogInfo(ModuleName, $"Successfully connected to {_ipAddress}:{_port}");
                         _networkStream = _tcpClient.GetStream();
+                        _logState = 0;
 
                         // Start receiving data
                         await ReceiveDataAsync();
                     }
                     else
                     {
-                        Logger.LogError(ModuleName, $"Failed to connect to {_ipAddress}:{_port}");
+                        if (_logState == 0)
+                        {
+                            Logger.LogError(ModuleName, $"Failed to connect to {_ipAddress}:{_port}");
+                        }
+                        _logState = 1;
                         SetConnectionState(PluginConnectionState.Disconnected);
                         CleanupConnection();
                     }
@@ -214,12 +219,17 @@ namespace SampleAirMonitor.MyModel.Internal
                 catch (OperationCanceledException) { break; }
                 catch (SocketException)
                 {
-                    Logger.LogVerbose(ModuleName, "Unable to establish connection to device.");
+                    if (_logState == 1)
+                    {
+                        Logger.LogVerbose(ModuleName, "Unable to establish connection to device.");
+                    }
+                    _logState = 2;
                     SetConnectionState(PluginConnectionState.Reconnecting);
                     CleanupConnection();
                 }
                 catch (Exception ex)
                 {
+                    _logState = 0;
                     Logger.LogError(ModuleName, $"Connection error: {ex.Message}");
                     SetConnectionState(PluginConnectionState.Reconnecting);
                     CleanupConnection();
