@@ -679,6 +679,53 @@ public DeviceControlDefinition? GetDeviceControlDefinition()
 }
 ```
 
+And the corresponding `GetDeviceData()` implementation:
+
+```csharp
+public Dictionary<string, object> GetDeviceData()
+{
+    lock (_lock)
+    {
+        return new Dictionary<string, object>
+        {
+            ["ON"] = AmpState != AmpOperateState.Standby ? 1 : 0,
+            ["OS"] = AmpState == AmpOperateState.Operate ? 1 : 0,
+            // FL must remain boolean (0/1) to match ActiveValue = "1" in the definition
+            ["FL"] = FaultCode > 0 ? 1 : 0,
+            // FaultDesc: reserved key — UI shows this string as the Fault LED hover tooltip
+            ["FaultDesc"] = GetFaultDescription(FaultCode),
+            ["BN"] = BandNumber
+        };
+    }
+}
+```
+
+### Reserved Device Data Keys
+
+The following keys in `GetDeviceData()` have special meaning to the Controller UI beyond LED activation:
+
+| Key | Type | Purpose |
+|-----|------|---------|
+| `"FL"` | `int` (0 or 1) | Fault LED activation — must equal `"1"` when `ActiveValue = "1"` |
+| `"FLT"` | `int` (0 or 1) | Fault LED activation for tuner-only devices |
+| `"FaultDesc"` | `string` | Hover tooltip text shown on the Fault LED when it is active (red). Empty string or omitted = no tooltip. |
+| `"BN"` | `int` | Band number — displayed in the band label using the standard band name map |
+
+### Fault Description Pattern
+
+Provide a `GetFaultDescription(int faultCode)` static method in your `StatusTracker` and populate `"FaultDesc"` from it. Return `string.Empty` for code 0 (no fault) so the tooltip disappears when the fault clears.
+
+```csharp
+public static string GetFaultDescription(int faultCode) => faultCode switch
+{
+    0 => string.Empty,
+    1 => "RF overload",
+    2 => "Temperature fault",
+    3 => "Power supply fault",
+    _ => $"Fault (code {faultCode})"
+};
+```
+
 Every `ResponseKey` used in the definition **must** also appear in the dictionary returned by `GetDeviceData()`, and the plugin **must** fire `DeviceDataChanged` when those values change.
 
 ---
