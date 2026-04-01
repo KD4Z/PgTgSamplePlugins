@@ -330,7 +330,7 @@ namespace SampleTuner.MyModel
             // Apply to status tracker
             bool hadTunerChange = update.TunerStateChanged || update.TuningStateChanged || update.TunerRelaysChanged;
             bool hadDeviceDataChange = update.TunerStateChanged || update.FaultCode.HasValue
-                || update.BandNumber.HasValue || update.Antenna.HasValue;
+                || update.BandNumber.HasValue || update.Antenna.HasValue || update.FanSpeed.HasValue;
 
             _statusTracker.ApplyUpdate(update);
 
@@ -539,6 +539,23 @@ namespace SampleTuner.MyModel
                         ActiveValue    = "1",        // Active when FaultCode > 0
                         IsClickable    = true
                     }
+                },
+
+                // ---------------------------------------------------------------
+                // FAN SPEED ROW
+                //   ResponseKey "FN" is populated by $FAN; poll → StatusTracker["FN"]
+                //   MaxSpeed 3 reflects a lighter-duty tuner fan (0 = off, 3 = full).
+                //   SetCommandPrefix "$FC" → button sends "$FC2;" to set speed 2.
+                //   PowerResponseKey "PS" mirrors the Power LED: buttons are only
+                //   enabled while the tuner is powered on and communicating (PS == "1").
+                // ---------------------------------------------------------------
+                FanControl = new FanControlDefinition
+                {
+                    ResponseKey      = "FN",    // Matches GetDeviceData()["FN"]
+                    MaxSpeed         = 3,        // 0 = off, 3 = full speed
+                    SetCommandPrefix = "$FC",    // e.g. "$FC2;" to set speed 2
+                    PowerResponseKey = "PS",     // Enable buttons only when tuner is on
+                    PowerActiveValue = "1"
                 }
             };
         }

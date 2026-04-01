@@ -35,6 +35,7 @@ namespace SampleAmp.MyModel.Internal
         public double Voltage { get; private set; }
         public double Current { get; private set; }
         public int Antenna { get; private set; }       // Current antenna port (1 or 2)
+        public int FanSpeed { get; private set; }      // Fan speed 0–5 (from $FAN; poll)
         public int BandNumber { get; private set; }
         public string BandName { get; private set; } = string.Empty;
         public int FaultCode { get; private set; }
@@ -67,6 +68,7 @@ namespace SampleAmp.MyModel.Internal
                 if (update.Voltage.HasValue) Voltage = update.Voltage.Value;
                 if (update.Current.HasValue) Current = update.Current.Value;
                 if (update.Antenna.HasValue) Antenna = update.Antenna.Value;
+                if (update.FanSpeed.HasValue) FanSpeed = update.FanSpeed.Value;
                 if (update.BandNumber.HasValue) BandNumber = update.BandNumber.Value;
                 if (update.BandName != null) BandName = update.BandName;
                 if (update.FaultCode.HasValue) FaultCode = update.FaultCode.Value;
@@ -161,7 +163,11 @@ namespace SampleAmp.MyModel.Internal
                     ["FL"] = FaultCode > 0 ? 1 : 0,
                     ["FaultDesc"] = GetFaultDescription(FaultCode),
 
-                    ["BN"] = BandNumber
+                    ["BN"] = BandNumber,
+
+                    // "FN" — Fan speed: integer 0–5 fed to the fan control row
+                    //         Up/down buttons send $FC0;–$FC5; (FanControlDefinition.SetCommandPrefix = "$FC")
+                    ["FN"] = FanSpeed
                 };
             }
         }

@@ -47,6 +47,10 @@ namespace SampleAmp.MyModel.Internal
         public const string Antenna1Cmd = "$AN1;";      // Select antenna port 1
         public const string Antenna2Cmd = "$AN2;";      // Select antenna port 2
 
+        // Fan speed commands — device replies $FAN n; where n = 0..5
+        public const string FanSpeedQueryCmd = "$FAN;";  // Query current fan speed
+        public const string FanSpeedCmdPrefix = "$FC";   // Set fan speed: $FC0; – $FC5;
+
         // Frequency command prefix (append kHz value, 5 digits, semicolon)
         public const string SetFreqKhzCmdPrefix = "$FRQ";
 
@@ -66,6 +70,7 @@ namespace SampleAmp.MyModel.Internal
             "$BND;",    // Band number
             "$ANT;",    // Antenna selection — populates AN LED in Device Control
             "$FLT;",    // Fault code — populates FL LED in Device Control
+            "$FAN;",    // Fan speed — populates FN key → fan control row
         };
 
         /// <summary>
@@ -112,6 +117,7 @@ namespace SampleAmp.MyModel.Internal
         public const string KeyBnd = "BND";     // Band number
         public const string KeyVlt = "VLT";     // Voltage/Current
         public const string KeyAnt = "ANT";     // Antenna port (1 or 2)
+        public const string KeyFan = "FAN";     // Fan speed (0–5)
         public const string KeyVer = "VER";     // Firmware version
         public const string KeySer = "SER";     // Serial number
         public const string KeyIdn = "IDN";     // Device identity

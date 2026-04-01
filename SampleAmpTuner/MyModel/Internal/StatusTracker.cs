@@ -56,6 +56,7 @@ namespace SampleAmpTuner.MyModel.Internal
         public int InductorValue { get; private set; }
         public int CapacitorValue { get; private set; }
         public int Antenna { get; private set; }
+        public int FanSpeed { get; private set; }      // Fan speed 0–6 (from $FAN; poll)
         public double TunerSWR { get; private set; } = 1.0;
         public double VFWD { get; private set; }
 
@@ -94,6 +95,7 @@ namespace SampleAmpTuner.MyModel.Internal
                 if (update.InductorValue.HasValue) InductorValue = update.InductorValue.Value;
                 if (update.CapacitorValue.HasValue) CapacitorValue = update.CapacitorValue.Value;
                 if (update.Antenna.HasValue) Antenna = update.Antenna.Value;
+                if (update.FanSpeed.HasValue) FanSpeed = update.FanSpeed.Value;
                 if (update.TunerSWR.HasValue) TunerSWR = update.TunerSWR.Value;
                 if (update.VFWD.HasValue) VFWD = update.VFWD.Value;
             }
@@ -195,7 +197,11 @@ namespace SampleAmpTuner.MyModel.Internal
                     ["AI"] = TunerState == TunerOperateState.Inline ? 1 : 0,
                     ["FL"] = FaultCode > 0 ? 1 : 0,
                     ["FaultDesc"] = GetFaultDescription(FaultCode),
-                    ["BN"] = BandNumber
+                    ["BN"] = BandNumber,
+
+                    // "FN" — Fan speed: integer 0–6 fed to the fan control row
+                    //         Up/down buttons send $FC0;–$FC6; (FanControlDefinition.SetCommandPrefix = "$FC")
+                    ["FN"] = FanSpeed
                 };
             }
         }

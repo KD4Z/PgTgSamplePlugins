@@ -46,6 +46,7 @@ namespace SampleAmpTuner.MyModel.Internal
             public int? Antenna { get; set; }
             public double? TunerSWR { get; set; }
             public int? VFWD { get; set; }     // Forward power ADC value (tuner)
+            public int? FanSpeed { get; set; }  // Fan speed 0–6; maps to ResponseKey "FN"
 
             // Amplifier change flags
             public bool AmpStateChanged { get; set; }
@@ -244,6 +245,13 @@ namespace SampleAmpTuner.MyModel.Internal
                 case Constants.KeyAnt:
                     if (int.TryParse(value, out int ant))
                         update.Antenna = ant;
+                    break;
+
+                case Constants.KeyFan:
+                    // Response: $FAN n; where n = 0–6
+                    // Drives the fan speed row (▼ label ▲) in Device Control.
+                    if (int.TryParse(value, out int fanSpeed))
+                        update.FanSpeed = fanSpeed;
                     break;
 
                 default:

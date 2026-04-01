@@ -375,7 +375,8 @@ namespace SampleAmpTuner.MyModel
             bool hadAmpChange = update.AmpStateChanged || update.PttStateChanged || update.PttReady;
             bool hadTunerChange = update.TunerStateChanged || update.TuningStateChanged || update.TunerRelaysChanged;
             bool hadDeviceDataChange = update.AmpStateChanged || update.TunerStateChanged
-                || update.FaultCode.HasValue || update.BandNumber.HasValue || update.Antenna.HasValue;
+                || update.FaultCode.HasValue || update.BandNumber.HasValue || update.Antenna.HasValue
+                || update.FanSpeed.HasValue;
 
             // Apply to status tracker
             _statusTracker.ApplyUpdate(update);
@@ -615,6 +616,23 @@ namespace SampleAmpTuner.MyModel
                         ActiveValue    = "1",        // Active when FaultCode > 0
                         IsClickable    = true
                     }
+                },
+
+                // ---------------------------------------------------------------
+                // FAN SPEED ROW
+                //   ResponseKey "FN" is populated by $FAN; poll → StatusTracker["FN"]
+                //   MaxSpeed 6 matches the higher-power combined amp+tuner fan range (0–6).
+                //   SetCommandPrefix "$FC" → button sends "$FC4;" to set speed 4.
+                //   PowerResponseKey "ON" mirrors the Power LED: buttons are only
+                //   enabled while the amplifier is powered on (ON == "1").
+                // ---------------------------------------------------------------
+                FanControl = new FanControlDefinition
+                {
+                    ResponseKey      = "FN",    // Matches GetDeviceData()["FN"]
+                    MaxSpeed         = 6,        // 0 = off, 6 = full speed
+                    SetCommandPrefix = "$FC",    // e.g. "$FC4;" to set speed 4
+                    PowerResponseKey = "ON",     // Enable buttons only when amplifier is on
+                    PowerActiveValue = "1"
                 }
             };
         }

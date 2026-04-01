@@ -32,6 +32,7 @@ namespace SampleTuner.MyModel.Internal
             public double? SWR { get; set; }
             public int? VFWD { get; set; }     // Forward power ADC value
             public int? FaultCode { get; set; }
+            public int? FanSpeed { get; set; }  // Fan speed 0–3; maps to ResponseKey "FN"
             public string? SerialNumber { get; set; }
             public double? FirmwareVersion { get; set; }
 
@@ -171,6 +172,13 @@ namespace SampleTuner.MyModel.Internal
                 case Constants.KeyAnt:
                     if (int.TryParse(value, out int ant))
                         update.Antenna = ant;
+                    break;
+
+                case Constants.KeyFan:
+                    // Response: $FAN n; where n = 0–3
+                    // Drives the fan speed row (▼ label ▲) in Device Control.
+                    if (int.TryParse(value, out int fanSpeed))
+                        update.FanSpeed = fanSpeed;
                     break;
 
                 case Constants.KeyFlt:

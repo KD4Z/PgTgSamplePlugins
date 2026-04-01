@@ -25,6 +25,7 @@ namespace SampleTuner.MyModel.Internal
         public int InductorValue { get; private set; }
         public int CapacitorValue { get; private set; }
         public int Antenna { get; private set; }
+        public int FanSpeed { get; private set; }      // Fan speed 0–3 (from $FAN; poll)
         public int BandNumber { get; private set; }
         public string BandName { get; private set; } = string.Empty;
         public double SWR { get; private set; } = 1.0;
@@ -62,6 +63,7 @@ namespace SampleTuner.MyModel.Internal
                 if (update.InductorValue.HasValue) InductorValue = update.InductorValue.Value;
                 if (update.CapacitorValue.HasValue) CapacitorValue = update.CapacitorValue.Value;
                 if (update.Antenna.HasValue) Antenna = update.Antenna.Value;
+                if (update.FanSpeed.HasValue) FanSpeed = update.FanSpeed.Value;
                 if (update.BandNumber.HasValue) BandNumber = update.BandNumber.Value;
                 if (update.BandName != null) BandName = update.BandName;
                 if (update.SWR.HasValue) SWR = update.SWR.Value;
@@ -150,7 +152,11 @@ namespace SampleTuner.MyModel.Internal
                     ["FLT"] = FaultCode > 0 ? 1 : 0,
                     ["FaultDesc"] = GetFaultDescription(FaultCode),
 
-                    ["BN"] = BandNumber
+                    ["BN"] = BandNumber,
+
+                    // "FN" — Fan speed: integer 0–3 fed to the fan control row
+                    //         Up/down buttons send $FC0;–$FC3; (FanControlDefinition.SetCommandPrefix = "$FC")
+                    ["FN"] = FanSpeed
                 };
             }
         }

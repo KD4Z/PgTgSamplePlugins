@@ -48,6 +48,10 @@ namespace SampleAmpTuner.MyModel.Internal
         public const string Antenna2Cmd = "$ANT 2;";
         public const string Antenna3Cmd = "$ANT 3;";
 
+        // Fan speed commands — device replies $FAN n; where n = 0..6
+        public const string FanSpeedQueryCmd = "$FAN;";  // Query current fan speed
+        public const string FanSpeedCmdPrefix = "$FC";   // Set fan speed: $FC0; – $FC6;
+
         #endregion
 
         #region Polling Command Arrays
@@ -71,6 +75,7 @@ namespace SampleAmpTuner.MyModel.Internal
             "$IND;",    // Inductor relay (tuner, hex)
             "$CAP;",    // Capacitor relay (tuner, hex)
             "$FLT;",    // Fault code — populates FL key → Fault LED
+            "$FAN;",    // Fan speed — populates FN key → fan control row
         };
 
         /// <summary>
@@ -131,6 +136,7 @@ namespace SampleAmpTuner.MyModel.Internal
         public const string KeyInd = "IND";     // Inductor relay
         public const string KeyCap = "CAP";     // Capacitor relay
         public const string KeyAnt = "ANT";     // Antenna
+        public const string KeyFan = "FAN";     // Fan speed (0–6)
 
         #endregion
 

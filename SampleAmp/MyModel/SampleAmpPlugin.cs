@@ -339,7 +339,7 @@ namespace SampleAmp.MyModel
             // Apply to status tracker
             bool hadAmpChange = update.AmpStateChanged || update.PttStateChanged || update.PttReady;
             bool hadDeviceDataChange = update.AmpStateChanged || update.FaultCode.HasValue
-                || update.BandNumber.HasValue || update.Antenna.HasValue;
+                || update.BandNumber.HasValue || update.Antenna.HasValue || update.FanSpeed.HasValue;
 
             _statusTracker.ApplyUpdate(update);
 
@@ -543,6 +543,23 @@ namespace SampleAmp.MyModel
                         ActiveValue    = "1",        // Active when fault code > 0
                         IsClickable    = true
                     }
+                },
+
+                // ---------------------------------------------------------------
+                // FAN SPEED ROW
+                //   ResponseKey "FN" is populated by $FAN; poll → StatusTracker["FN"]
+                //   MaxSpeed 5 matches the device's fan range (0 = off, 5 = full).
+                //   SetCommandPrefix "$FC" → button sends "$FC3;" to set speed 3.
+                //   PowerResponseKey "ON" mirrors the Power LED: buttons are only
+                //   enabled while the amplifier is powered on (ON == "1").
+                // ---------------------------------------------------------------
+                FanControl = new FanControlDefinition
+                {
+                    ResponseKey      = "FN",    // Matches GetDeviceData()["FN"]
+                    MaxSpeed         = 5,        // 0 = off, 5 = full speed
+                    SetCommandPrefix = "$FC",    // e.g. "$FC3;" to set speed 3
+                    PowerResponseKey = "ON",     // Enable buttons only when amplifier is on
+                    PowerActiveValue = "1"
                 }
             };
         }

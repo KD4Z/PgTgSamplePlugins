@@ -37,6 +37,7 @@ namespace SampleAmp.MyModel.Internal
 
             // Device Control state — match the ResponseKey fields in GetDeviceControlDefinition()
             public int? Antenna { get; set; }   // Antenna port number; maps to ResponseKey "AN"
+            public int? FanSpeed { get; set; }  // Fan speed 0–5; maps to ResponseKey "FN"
 
             // Change flags
             public bool AmpStateChanged { get; set; }
@@ -148,6 +149,13 @@ namespace SampleAmp.MyModel.Internal
                     // Only the matching antenna LED lights green; the other shows gray.
                     if (int.TryParse(value, out int ant))
                         update.Antenna = ant;
+                    break;
+
+                case Constants.KeyFan:
+                    // Response: $FAN n; where n = 0–5
+                    // Drives the fan speed row (▼ label ▲) in Device Control.
+                    if (int.TryParse(value, out int fanSpeed))
+                        update.FanSpeed = fanSpeed;
                     break;
 
                 case Constants.KeyFlt:

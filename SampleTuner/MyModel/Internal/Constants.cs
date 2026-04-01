@@ -51,6 +51,10 @@ namespace SampleTuner.MyModel.Internal
         public const string Antenna2Cmd = "$ANT 2;";
         public const string Antenna3Cmd = "$ANT 3;";
 
+        // Fan speed commands — device replies $FAN n; where n = 0..3
+        public const string FanSpeedQueryCmd = "$FAN;";  // Query current fan speed
+        public const string FanSpeedCmdPrefix = "$FC";   // Set fan speed: $FC0; – $FC3;
+
         // Frequency command prefix (append kHz value, 5 digits, semicolon)
         // Format: $FRQ nnnnn; (e.g., $FRQ 14250; for 14.25 MHz)
         public const string SetFreqKhzCmdPrefix = "$FRQ ";
@@ -74,6 +78,7 @@ namespace SampleTuner.MyModel.Internal
             "$ANT;",    // Antenna selection — populates AN key → Ant1/Ant2 LEDs
             "$BND;",    // Band number
             "$FLT;",    // Fault code — populates FLT key → Fault LED
+            "$FAN;",    // Fan speed — populates FN key → fan control row
         };
 
         /// <summary>
@@ -123,6 +128,7 @@ namespace SampleTuner.MyModel.Internal
         public const string KeySer = "SER";     // Serial number
         public const string KeyIdn = "IDN";     // Device identity
         public const string KeyAnt = "ANT";     // Antenna
+        public const string KeyFan = "FAN";     // Fan speed (0–3)
 
         #endregion
 
