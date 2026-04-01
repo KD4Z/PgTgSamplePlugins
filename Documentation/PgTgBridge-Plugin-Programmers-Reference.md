@@ -657,6 +657,7 @@ On WebSocket connect, the service sends the definitions to the Controller, which
 | `ResponseKey` | `string` | Key in `GetDeviceData()` dict that drives this element's state |
 | `ActiveValue` | `string` | Value (case-insensitive string compare) that means "active" |
 | `IsClickable` | `bool` | Whether the LED responds to clicks |
+| `IsPowerIndicator` | `bool` | Mark exactly one element as the device power indicator. This LED stays enabled even when the device is off so the user can click it to power the device back on. All other LEDs are disabled while power is off. Default: `false` |
 
 ### DeviceControlDefinition
 
@@ -676,16 +677,16 @@ Adds a dedicated fan speed row to the Device Control panel. The row displays the
 | `ResponseKey` | `string` | `"FN"` | Key in `GetDeviceData()` that carries the current fan speed integer |
 | `MaxSpeed` | `int` | `5` | Maximum allowed speed (inclusive). Up button disabled at this value |
 | `SetCommandPrefix` | `string` | `"FC"` | Command prefix. Combined with speed and `";"` — e.g. `"$FC"` → `"$FC3;"` |
-| `PowerResponseKey` | `string?` | `null` | Optional key in `GetDeviceData()` that gates button enable/disable. When `null` buttons are always enabled |
-| `PowerActiveValue` | `string` | `"1"` | Value of `PowerResponseKey` that means "powered on." Ignored when `PowerResponseKey` is `null` |
 
 **How the fan row works:**
 - `GetDeviceData()` must return `["FN"] = <current speed int>` on every update.
 - The panel reads this value and displays it between the two buttons.
 - When the user clicks ▲ (up), the panel sends `SetCommandPrefix + (current + 1) + ";"` via `SendDeviceCommand`.
 - When the user clicks ▼ (down), it sends `SetCommandPrefix + (current − 1) + ";"`.
-- Buttons are disabled when: at min/max speed, power is off (if `PowerResponseKey` is configured), or the speed value has not yet been received.
+- Buttons are disabled when: at min/max speed, device power is off (derived from the element flagged `IsPowerIndicator`), or the speed value has not yet been received.
 - Fire `DeviceDataChanged` whenever `FN` changes so the display updates promptly.
+
+> **Note:** Fan button enable/disable tracks the same power state as the LED disable sweep. Set `IsPowerIndicator = true` on your power element and the fan buttons will automatically be disabled when the device is off. 
 
 ### Data Flow
 
@@ -726,7 +727,8 @@ public DeviceControlDefinition? GetDeviceControlDefinition()
                 ActiveText = "Power On", InactiveText = "Power Off",
                 ActiveCommand = "$ON0;", InactiveCommand = "$ON1;",
                 ResponseKey = "ON", ActiveValue = "1",
-                IsClickable = true
+                IsClickable = true,
+                IsPowerIndicator = true   // stays enabled when off so user can power up
             },
             new DeviceControlElement
             {
@@ -753,8 +755,7 @@ public DeviceControlDefinition? GetDeviceControlDefinition()
             ResponseKey      = "FN",   // GetDeviceData()["FN"] = current speed int
             MaxSpeed         = 5,       // 0 = off, 5 = full
             SetCommandPrefix = "$FC",   // sends "$FC3;" to select speed 3
-            PowerResponseKey = "ON",    // disable buttons when power is off
-            PowerActiveValue = "1"
+            // Fan buttons are automatically disabled when the IsPowerIndicator element is inactive.
         }
     };
 }
@@ -3324,6 +3325,7 @@ When creating a new plugin:
 - [ ] Test PTT interlock timing thoroughly
 - [ ] Implement `GetDeviceControlDefinition()` for Device Control panel UI
 - [ ] Add `FanControlDefinition` to the definition if the device has a variable-speed fan
+- [ ] Set `IsPowerIndicator = true` on the power element if the device can be powered off (enables correct LED disable sweep and fan button gating)
 
 ---
 ## Key Architecture Changes
@@ -3356,6 +3358,7 @@ Radio sends PTT_REQUESTED → InterlockBase detects it → Bridge sends to plugi
 | 1.1 | March 2026 | Phase 4 doc update: MyModel/Internal architecture pattern, $-prefix protocol reference, multi-transport guidance, timer disposal order fix, sample project file trees, LogLudicrous → LogVerbose |
 | 1.2 | March 2026 | Device Control panel integration for external plugins: `GetDeviceControlDefinition()`, dynamic LED rendering, `DeviceControlElement`/`DeviceControlDefinition` types |
 | 1.3 | April 2026 | Fan speed control row for external plugins: `FanControlDefinition`, `FanControl` property on `DeviceControlDefinition`, `"FN"` reserved key, updated sample plugins (SampleAmp/SampleTuner/SampleAmpTuner) |
+| 1.4 | April 2026 | Power indicator element: `IsPowerIndicator` property on `DeviceControlElement`. Power LED stays enabled when device is off; all other LEDs and fan buttons are disabled automatically. Removed `PowerResponseKey`/`PowerActiveValue` from `FanControlDefinition` (superseded by `IsPowerIndicator`). |
 
 ---
 

@@ -453,24 +453,33 @@ namespace SampleAmp.MyModel
                 Elements = new List<DeviceControlElement>
                 {
                     // ---------------------------------------------------------------
-                    // POWER LED
+                    // POWER LED  *** SPECIAL CASE — IsPowerIndicator = true ***
                     //   ResponseKey "ON" is populated by $ANT; poll → StatusTracker["ON"]
                     //   Active (green)   = amplifier is powered on  (AmpState != Unknown/Standby)
                     //   Inactive (gray)  = amplifier is off / not responding
                     //   Click while ON   → sends $ON0; (power off command)
                     //   Click while OFF  → sends $ON1; (power on command)
+                    //
+                    //   IsPowerIndicator = true tells the Device Control panel that this
+                    //   element represents the device power state.  Two behaviours follow:
+                    //     1. This LED remains ENABLED even when the device is off, so the
+                    //        user can always click it to power the device back on.
+                    //     2. All other LEDs (and the fan buttons, if present) are disabled
+                    //        automatically while this element is inactive (device off).
+                    //   Set IsPowerIndicator on at most ONE element per definition.
                     // ---------------------------------------------------------------
                     new DeviceControlElement
                     {
-                        ActiveColor    = "green",
-                        InactiveColor  = "gray",
-                        ActiveText     = "Power",
-                        InactiveText   = "Power",
-                        ActiveCommand  = "$ON0;",    // Send to turn device off
-                        InactiveCommand = "$ON1;",   // Send to turn device on
-                        ResponseKey    = "ON",       // Matches GetDeviceData()["ON"]
-                        ActiveValue    = "1",        // GetDeviceData() returns 1 when on
-                        IsClickable    = true
+                        ActiveColor      = "green",
+                        InactiveColor    = "gray",
+                        ActiveText       = "Power",
+                        InactiveText     = "Power",
+                        ActiveCommand    = "$ON0;",    // Send to turn device off
+                        InactiveCommand  = "$ON1;",    // Send to turn device on
+                        ResponseKey      = "ON",       // Matches GetDeviceData()["ON"]
+                        ActiveValue      = "1",        // GetDeviceData() returns 1 when on
+                        IsClickable      = true,
+                        IsPowerIndicator = true        // Keeps this LED clickable when device is off
                     },
 
                     // ---------------------------------------------------------------
@@ -564,16 +573,16 @@ namespace SampleAmp.MyModel
                 //   ResponseKey "FN" is populated by $FAN; poll → StatusTracker["FN"]
                 //   MaxSpeed 5 matches the device's fan range (0 = off, 5 = full).
                 //   SetCommandPrefix "$FC" → button sends "$FC3;" to set speed 3.
-                //   PowerResponseKey "ON" mirrors the Power LED: buttons are only
-                //   enabled while the amplifier is powered on (ON == "1").
+                //
+                //   Fan button enable/disable is automatic: because the Power element
+                //   above has IsPowerIndicator = true, the panel disables the fan
+                //   buttons whenever the device is off — no extra configuration needed.
                 // ---------------------------------------------------------------
                 FanControl = new FanControlDefinition
                 {
                     ResponseKey      = "FN",    // Matches GetDeviceData()["FN"]
                     MaxSpeed         = 5,        // 0 = off, 5 = full speed
                     SetCommandPrefix = "$FC",    // e.g. "$FC3;" to set speed 3
-                    PowerResponseKey = "ON",     // Enable buttons only when amplifier is on
-                    PowerActiveValue = "1"
                 }
             };
         }

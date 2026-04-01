@@ -446,25 +446,34 @@ namespace SampleTuner.MyModel
                 Elements = new List<DeviceControlElement>
                 {
                     // ---------------------------------------------------------------
-                    // POWER LED
+                    // POWER LED  *** SPECIAL CASE — IsPowerIndicator = true ***
                     //   ResponseKey "PS" populated by deriving from TunerState in
                     //   StatusTracker.GetDeviceData(): 1 when tuner is responding, 0 otherwise.
                     //   Active (green)   = tuner is powered on and communicating
                     //   Inactive (gray)  = tuner is off or not yet connected
                     //   Click while ON   → sends $PS0; (power off)
                     //   Click while OFF  → sends $PS1; (power on)
+                    //
+                    //   IsPowerIndicator = true tells the Device Control panel that this
+                    //   element represents the device power state.  Two behaviours follow:
+                    //     1. This LED remains ENABLED even when the device is off, so the
+                    //        user can always click it to power the device back on.
+                    //     2. All other LEDs (and the fan buttons, if present) are disabled
+                    //        automatically while this element is inactive (device off).
+                    //   Set IsPowerIndicator on at most ONE element per definition.
                     // ---------------------------------------------------------------
                     new DeviceControlElement
                     {
-                        ActiveColor    = "green",
-                        InactiveColor  = "gray",
-                        ActiveText     = "Power",
-                        InactiveText   = "Power",
-                        ActiveCommand  = "$PS0;",    // Send to power off
-                        InactiveCommand = "$PS1;",   // Send to power on
-                        ResponseKey    = "PS",       // Matches GetDeviceData()["PS"]
-                        ActiveValue    = "1",        // 1 = powered on
-                        IsClickable    = true
+                        ActiveColor      = "green",
+                        InactiveColor    = "gray",
+                        ActiveText       = "Power",
+                        InactiveText     = "Power",
+                        ActiveCommand    = "$PS0;",    // Send to power off
+                        InactiveCommand  = "$PS1;",    // Send to power on
+                        ResponseKey      = "PS",       // Matches GetDeviceData()["PS"]
+                        ActiveValue      = "1",        // 1 = powered on
+                        IsClickable      = true,
+                        IsPowerIndicator = true        // Keeps this LED clickable when device is off
                     },
 
                     // ---------------------------------------------------------------
@@ -560,16 +569,16 @@ namespace SampleTuner.MyModel
                 //   ResponseKey "FN" is populated by $FAN; poll → StatusTracker["FN"]
                 //   MaxSpeed 3 reflects a lighter-duty tuner fan (0 = off, 3 = full).
                 //   SetCommandPrefix "$FC" → button sends "$FC2;" to set speed 2.
-                //   PowerResponseKey "PS" mirrors the Power LED: buttons are only
-                //   enabled while the tuner is powered on and communicating (PS == "1").
+                //
+                //   Fan button enable/disable is automatic: because the Power element
+                //   above has IsPowerIndicator = true, the panel disables the fan
+                //   buttons whenever the device is off — no extra configuration needed.
                 // ---------------------------------------------------------------
                 FanControl = new FanControlDefinition
                 {
                     ResponseKey      = "FN",    // Matches GetDeviceData()["FN"]
                     MaxSpeed         = 3,        // 0 = off, 3 = full speed
                     SetCommandPrefix = "$FC",    // e.g. "$FC2;" to set speed 2
-                    PowerResponseKey = "PS",     // Enable buttons only when tuner is on
-                    PowerActiveValue = "1"
                 }
             };
         }
