@@ -615,7 +615,32 @@ On WebSocket connect, the service sends the definitions to the Controller, which
 
 ### DeviceControlDefinition
 
-A wrapper containing `List<DeviceControlElement> Elements`, rendered left-to-right in order.
+A wrapper containing two optional sections:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `Elements` | `List<DeviceControlElement>` | LED indicator elements rendered left-to-right |
+| `FanControl` | `FanControlDefinition?` | Optional fan speed row (▼ label ▲). When non-null the panel adds a dedicated fan speed control row identical to the built-in KPA500/KPA1500 UI. Default: `null` (no fan row) |
+
+### FanControlDefinition
+
+Adds a dedicated fan speed row to the Device Control panel. The row displays the current speed and two buttons (▼ down / ▲ up) that send `SetCommandPrefix + speed + ";"` directly via `SendDeviceCommand`.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `ResponseKey` | `string` | `"FN"` | Key in `GetDeviceData()` that carries the current fan speed integer |
+| `MaxSpeed` | `int` | `5` | Maximum allowed speed (inclusive). Up button disabled at this value |
+| `SetCommandPrefix` | `string` | `"FC"` | Command prefix. Combined with speed and `";"` — e.g. `"$FC"` → `"$FC3;"` |
+| `PowerResponseKey` | `string?` | `null` | Optional key in `GetDeviceData()` that gates button enable/disable. When `null` buttons are always enabled |
+| `PowerActiveValue` | `string` | `"1"` | Value of `PowerResponseKey` that means "powered on." Ignored when `PowerResponseKey` is `null` |
+
+**How the fan row works:**
+- `GetDeviceData()` must return `["FN"] = <current speed int>` on every update.
+- The panel reads this value and displays it between the two buttons.
+- When the user clicks ▲ (up), the panel sends `SetCommandPrefix + (current + 1) + ";"` via `SendDeviceCommand`.
+- When the user clicks ▼ (down), it sends `SetCommandPrefix + (current − 1) + ";"`.
+- Buttons are disabled when: at min/max speed, power is off (if `PowerResponseKey` is configured), or the speed value has not yet been received.
+- Fire `DeviceDataChanged` whenever `FN` changes so the display updates promptly.
 
 ### Data Flow
 
@@ -674,6 +699,17 @@ public DeviceControlDefinition? GetDeviceControlDefinition()
                 ResponseKey = "FL", ActiveValue = "1",
                 IsClickable = true
             }
+        },
+
+        // Optional fan speed row — omit entirely if your device has no fan control.
+        // Renders ▼ Fan ▲ buttons identical to the built-in KPA500/KPA1500 UI.
+        FanControl = new FanControlDefinition
+        {
+            ResponseKey      = "FN",   // GetDeviceData()["FN"] = current speed int
+            MaxSpeed         = 5,       // 0 = off, 5 = full
+            SetCommandPrefix = "$FC",   // sends "$FC3;" to select speed 3
+            PowerResponseKey = "ON",    // disable buttons when power is off
+            PowerActiveValue = "1"
         }
     };
 }
@@ -694,7 +730,9 @@ public Dictionary<string, object> GetDeviceData()
             ["FL"] = FaultCode > 0 ? 1 : 0,
             // FaultDesc: reserved key — UI shows this string as the Fault LED hover tooltip
             ["FaultDesc"] = GetFaultDescription(FaultCode),
-            ["BN"] = BandNumber
+            ["BN"] = BandNumber,
+            // FN: current fan speed integer (0–MaxSpeed); drives the fan control row
+            ["FN"] = FanSpeed
         };
     }
 }
@@ -710,6 +748,7 @@ The following keys in `GetDeviceData()` have special meaning to the Controller U
 | `"FLT"` | `int` (0 or 1) | Fault LED activation for tuner-only devices |
 | `"FaultDesc"` | `string` | Hover tooltip text shown on the Fault LED when it is active (red). Empty string or omitted = no tooltip. |
 | `"BN"` | `int` | Band number — displayed in the band label using the standard band name map |
+| `"FN"` | `int` | Current fan speed. Required when `FanControlDefinition.ResponseKey = "FN"` (the default). Value is displayed between the ▼ and ▲ buttons. |
 
 ### Fault Description Pattern
 
@@ -3239,6 +3278,7 @@ When creating a new plugin:
 - [ ] Add unit and integration tests
 - [ ] Test PTT interlock timing thoroughly
 - [ ] Implement `GetDeviceControlDefinition()` for Device Control panel UI
+- [ ] Add `FanControlDefinition` to the definition if the device has a variable-speed fan
 
 ---
 ## Key Architecture Changes
@@ -3270,6 +3310,7 @@ Radio sends PTT_REQUESTED → InterlockBase detects it → Bridge sends to plugi
 | 1.0 | December 2025 | Initial plugin architecture release |
 | 1.1 | March 2026 | Phase 4 doc update: MyModel/Internal architecture pattern, $-prefix protocol reference, multi-transport guidance, timer disposal order fix, sample project file trees, LogLudicrous → LogVerbose |
 | 1.2 | March 2026 | Device Control panel integration for external plugins: `GetDeviceControlDefinition()`, dynamic LED rendering, `DeviceControlElement`/`DeviceControlDefinition` types |
+| 1.3 | April 2026 | Fan speed control row for external plugins: `FanControlDefinition`, `FanControl` property on `DeviceControlDefinition`, `"FN"` reserved key, updated sample plugins (SampleAmp/SampleTuner/SampleAmpTuner) |
 
 ---
 
