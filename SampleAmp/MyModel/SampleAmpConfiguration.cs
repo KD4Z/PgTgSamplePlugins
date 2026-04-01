@@ -24,6 +24,7 @@ namespace SampleAmp.MyModel
         public bool SerialSupported { get; set; } = true;
         public bool WolSupported { get; set; } = false;
         public bool SkipDeviceWakeup { get; set; } = false;
+        public bool DisableControlsOnDisconnect { get; set; } = true;
 
         // IAmplifierConfiguration
         public int PollingIntervalRxMs { get; set; } = Constants.PollingRxMs;

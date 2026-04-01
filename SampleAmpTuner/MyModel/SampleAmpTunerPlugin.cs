@@ -57,6 +57,7 @@ namespace SampleAmpTuner.MyModel
         private bool _radioConnected;
         private bool _stopped;
         private bool _disposed;
+        private bool _disableControlsOnDisconnect = true;
 
         #region IDevicePlugin
 
@@ -75,6 +76,15 @@ namespace SampleAmpTuner.MyModel
         public PluginConnectionState ConnectionState => _connection?.ConnectionState ?? PluginConnectionState.Disconnected;
 
         public double MeterDisplayMaxPower => Constants.MeterDisplayMaxPower;
+
+        /// <summary>
+        /// Controls whether the Device Control panel automatically disables LEDs and buttons
+        /// when the connection state is not Connected. Set via plugin settings JSON:
+        ///   "DisableControlsOnDisconnect": false
+        /// Defaults to true (controls are disabled when disconnected, except the Power LED).
+        /// Set to false if your plugin manages UI state independently via GetDeviceData() values.
+        /// </summary>
+        public bool DisableControlsOnDisconnect => _disableControlsOnDisconnect;
 
         public event EventHandler<PluginConnectionStateChangedEventArgs>? ConnectionStateChanged;
         public event EventHandler<MeterDataEventArgs>? MeterDataAvailable;
@@ -146,6 +156,10 @@ namespace SampleAmpTuner.MyModel
                 _config.PollingIntervalTxMs,
                 _config.PttWatchdogIntervalMs);
             _commandQueue.SkipDeviceWakeup = _config.SkipDeviceWakeup;
+
+            // Read the connection-state UI behaviour from settings.
+            // Set "DisableControlsOnDisconnect": false in the plugin's settings JSON to opt out.
+            _disableControlsOnDisconnect = _config.DisableControlsOnDisconnect;
 
             // Wire up events
             _connection.DataReceived += OnDataReceived;

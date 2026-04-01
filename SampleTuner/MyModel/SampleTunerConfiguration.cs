@@ -74,6 +74,7 @@ namespace SampleTuner.MyModel
         /// Not applicable to tuner-only plugins but required by IPluginConfiguration.
         /// </summary>
         public bool SkipDeviceWakeup { get; set; } = false;
+        public bool DisableControlsOnDisconnect { get; set; } = true;
 
         // ITunerConfiguration specific properties
 
