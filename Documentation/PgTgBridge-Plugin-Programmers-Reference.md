@@ -153,6 +153,9 @@ public interface IDevicePlugin : IDisposable
     Dictionary<string, object> GetDeviceData() => new();
     bool SendDeviceCommand(string command) => false;
     DeviceControlDefinition? GetDeviceControlDefinition() => null;
+
+    // Connection state UI behaviour (default = true; override to opt out)
+    bool DisableControlsOnDisconnect => true;
 }
 ```
 
@@ -282,6 +285,11 @@ public interface IPluginConfiguration
     string IpAddress { get; set; }
     int Port { get; set; }
     int ReconnectDelayMs { get; set; }
+
+    // When true (default), the Controller disables Device Control UI elements
+    // (LEDs, fan buttons) whenever the plugin is not in the Connected state.
+    // The Power LED is always kept enabled regardless of this setting.
+    bool DisableControlsOnDisconnect { get; set; }  // default: true
 }
 
 // Amplifier-specific settings
@@ -344,6 +352,7 @@ public class PluginConfigurationEntry
     public string IpAddress { get; set; }
     public int Port { get; set; }
     public int ReconnectDelayMs { get; set; }
+    public bool DisableControlsOnDisconnect { get; set; } = true;  // see below
     public Dictionary<string, object>? CustomSettings { get; set; }
 }
 ```
@@ -583,6 +592,42 @@ private void OnConnectionStateChanged(PluginConnectionState newState)
         new PluginConnectionStateChangedEventArgs(previous, newState));
 }
 ```
+
+### Connection State and Device Control UI (Auto Enable/Disable)
+
+When a plugin raises `ConnectionStateChanged`, the Bridge immediately broadcasts a `WsDeviceConnectionState` WebSocket message to the Controller. The Controller responds by enabling or disabling the Device Control panel's interactive elements based on the connection state:
+
+- **Connected** → all LEDs and fan speed buttons are enabled.
+- **Any other state** (Disconnected, Connecting, Reconnecting, Error) → all LEDs and buttons are disabled **except the Power LED**, which always remains enabled so the device can be powered on remotely.
+
+#### Configuring the behaviour
+
+This auto-disable behaviour is controlled per plugin via `DisableControlsOnDisconnect` (default: `true`).
+
+**In the plugin class** — read the setting from config in `InitializeAsync` and expose it via the `IDevicePlugin` property:
+
+```csharp
+private bool _disableControlsOnDisconnect = true;
+
+// In InitializeAsync:
+_disableControlsOnDisconnect = configuration.DisableControlsOnDisconnect;
+
+// IDevicePlugin property:
+public bool DisableControlsOnDisconnect => _disableControlsOnDisconnect;
+```
+
+**In the plugin settings JSON** — set the value to `false` to opt out:
+
+```json
+{
+  "PluginId": "mycompany.mydevice",
+  "IpAddress": "192.168.1.100",
+  "Port": 4000,
+  "DisableControlsOnDisconnect": false
+}
+```
+
+Set `DisableControlsOnDisconnect` to `false` when your plugin manages all UI state independently through `GetDeviceData()` values — for example, if a disconnected state is already reflected by graying out the Power LED via its `ActiveValue`.
 
 ---
 
