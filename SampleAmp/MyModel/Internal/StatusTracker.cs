@@ -92,6 +92,7 @@ namespace SampleAmp.MyModel.Internal
                     BandNumber = BandNumber,
                     BandName = BandName,
                     FaultCode = FaultCode,
+                    FaultInfo = GetFaultDescription(FaultCode),
                     FirmwareVersion = FirmwareVersion.ToString("F2"),
                     SerialNumber = SerialNumber,
                     ForwardPower = ForwardPower,

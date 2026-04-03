@@ -92,7 +92,9 @@ namespace SampleTuner.MyModel.Internal
                     LastSwr = SWR,
                     FirmwareVersion = FirmwareVersion.ToString("F2"),
                     SerialNumber = SerialNumber,
-                    ForwardPower = ForwardPowerWatts
+                    ForwardPower = ForwardPowerWatts,
+                    FaultCode = FaultCode,
+                    FaultInfo = GetFaultDescription(FaultCode)
                 };
             }
         }

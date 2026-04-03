@@ -115,6 +115,7 @@ namespace SampleAmpTuner.MyModel.Internal
                     BandNumber = BandNumber,
                     BandName = BandName,
                     FaultCode = FaultCode,
+                    FaultInfo = GetFaultDescription(FaultCode),
                     FirmwareVersion = FirmwareVersion.ToString("F2"),
                     SerialNumber = SerialNumber,
                     ForwardPower = ForwardPower,
@@ -142,7 +143,9 @@ namespace SampleAmpTuner.MyModel.Internal
                     LastSwr = TunerSWR,
                     FirmwareVersion = FirmwareVersion.ToString("F2"),
                     SerialNumber = SerialNumber,
-                    ForwardPower = TunerForwardPowerWatts
+                    ForwardPower = TunerForwardPowerWatts,
+                    FaultCode = FaultCode,
+                    FaultInfo = GetFaultDescription(FaultCode)
                 };
             }
         }

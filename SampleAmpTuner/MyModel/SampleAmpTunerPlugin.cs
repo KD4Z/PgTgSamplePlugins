@@ -387,7 +387,7 @@ namespace SampleAmpTuner.MyModel
 
             // Determine what changed before applying the update
             bool hadAmpChange = update.AmpStateChanged || update.PttStateChanged || update.PttReady;
-            bool hadTunerChange = update.TunerStateChanged || update.TuningStateChanged || update.TunerRelaysChanged;
+            bool hadTunerChange = update.TunerStateChanged || update.TuningStateChanged || update.TunerRelaysChanged || update.FaultChanged;
             bool hadDeviceDataChange = update.AmpStateChanged || update.TunerStateChanged
                 || update.FaultCode.HasValue || update.BandNumber.HasValue || update.Antenna.HasValue
                 || update.FanSpeed.HasValue;
@@ -674,6 +674,7 @@ namespace SampleAmpTuner.MyModel
 
         private TunerStatusChange DetermineTunerChange(ResponseParser.StatusUpdate update)
         {
+            if (update.FaultChanged) return TunerStatusChange.FaultOccurred;
             if (update.TuningStateChanged) return TunerStatusChange.TuningStateChanged;
             if (update.TunerStateChanged) return TunerStatusChange.OperateStateChanged;
             if (update.TunerRelaysChanged) return TunerStatusChange.RelayValuesChanged;

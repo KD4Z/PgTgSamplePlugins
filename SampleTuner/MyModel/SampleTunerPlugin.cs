@@ -342,7 +342,7 @@ namespace SampleTuner.MyModel
             }
 
             // Apply to status tracker
-            bool hadTunerChange = update.TunerStateChanged || update.TuningStateChanged || update.TunerRelaysChanged;
+            bool hadTunerChange = update.TunerStateChanged || update.TuningStateChanged || update.TunerRelaysChanged || update.FaultChanged;
             bool hadDeviceDataChange = update.TunerStateChanged || update.FaultCode.HasValue
                 || update.BandNumber.HasValue || update.Antenna.HasValue || update.FanSpeed.HasValue;
 
@@ -589,6 +589,7 @@ namespace SampleTuner.MyModel
 
         private TunerStatusChange DetermineTunerChange(ResponseParser.StatusUpdate update)
         {
+            if (update.FaultChanged) return TunerStatusChange.FaultOccurred;
             if (update.TuningStateChanged) return TunerStatusChange.TuningStateChanged;
             if (update.TunerStateChanged) return TunerStatusChange.OperateStateChanged;
             if (update.TunerRelaysChanged) return TunerStatusChange.RelayValuesChanged;

@@ -58,6 +58,7 @@ namespace SampleAmpTuner.MyModel.Internal
             public bool TunerStateChanged { get; set; }
             public bool TuningStateChanged { get; set; }
             public bool TunerRelaysChanged { get; set; }
+            public bool FaultChanged { get; set; }
         }
 
         /// <summary>
@@ -161,7 +162,11 @@ namespace SampleAmpTuner.MyModel.Internal
 
                 case Constants.KeyFlt:
                     if (int.TryParse(value, out int fault))
+                    {
+                        if (fault != tracker.FaultCode)
+                            update.FaultChanged = true;
                         update.FaultCode = fault;
+                    }
                     break;
 
                 case Constants.KeyVer:
