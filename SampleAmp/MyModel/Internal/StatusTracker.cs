@@ -85,10 +85,12 @@ namespace SampleAmp.MyModel.Internal
         {
             lock (_lock)
             {
+                AmpOperateState _ampState = AmpState;
+                bool currentPTT = _ampState == AmpOperateState.Operate ? IsPtt : false; // must return false if amp is in standby
                 return new AmplifierStatusData
                 {
                     OperateState = AmpState,
-                    IsPttActive = IsPtt,
+                    IsPttActive = currentPTT,
                     BandNumber = BandNumber,
                     BandName = BandName,
                     FaultCode = FaultCode,
