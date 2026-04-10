@@ -21,6 +21,7 @@ namespace SampleAirMonitor.MyModel.Internal
 
         private readonly CancellationToken _cancellationToken;
         private readonly object _lock = new();
+        private readonly object _writeLock = new();
 
         private SerialPort? _serialPort;
         private string _portName = string.Empty;
@@ -103,39 +104,22 @@ namespace SampleAirMonitor.MyModel.Internal
         /// <returns>True if sent successfully.</returns>
         public bool Send(string data)
         {
-            if (!IsConnected || _serialPort == null)
-            {
-                return false;
-            }
+            SerialPort? port = AcquirePort();
+            if (port == null) return false;
 
-            try
+            lock (_writeLock)
             {
-                _serialPort.Write(data);
-                _sendErrorLogged = false;
-                return true;
-            }
-            catch (InvalidOperationException ex)
-            {
-                if (!_sendErrorLogged)
+                try
                 {
-                    Logger.LogError(ModuleName, $"Send Error (port not open): {ex.Message}");
-                    _sendErrorLogged = true;
+                    port.Write(data);
+                    _sendErrorLogged = false;
+                    return true;
                 }
-                return false;
-            }
-            catch (TimeoutException ex)
-            {
-                if (!_sendErrorLogged)
+                catch (Exception ex)
                 {
-                    Logger.LogError(ModuleName, $"Send Timeout: {ex.Message}");
-                    _sendErrorLogged = true;
+                    LogSendException(ex);
+                    return false;
                 }
-                return false;
-            }
-            catch (Exception ex)
-            {
-                Logger.LogVerbose(ModuleName, $"Error sending message to device: {ex.Message}");
-                return false;
             }
         }
 
@@ -144,39 +128,69 @@ namespace SampleAirMonitor.MyModel.Internal
         /// </summary>
         public bool Send(byte[] data)
         {
-            if (!IsConnected || _serialPort == null)
-            {
-                return false;
-            }
+            SerialPort? port = AcquirePort();
+            if (port == null) return false;
 
-            try
+            lock (_writeLock)
             {
-                _serialPort.Write(data, 0, data.Length);
-                _sendErrorLogged = false;
-                return true;
-            }
-            catch (InvalidOperationException ex)
-            {
-                if (!_sendErrorLogged)
+                try
                 {
-                    Logger.LogError(ModuleName, $"Send Error (port not open): {ex.Message}");
-                    _sendErrorLogged = true;
+                    port.Write(data, 0, data.Length);
+                    _sendErrorLogged = false;
+                    return true;
                 }
-                return false;
-            }
-            catch (TimeoutException ex)
-            {
-                if (!_sendErrorLogged)
+                catch (Exception ex)
                 {
-                    Logger.LogError(ModuleName, $"Send Timeout: {ex.Message}");
-                    _sendErrorLogged = true;
+                    LogSendException(ex);
+                    return false;
                 }
-                return false;
             }
-            catch (Exception ex)
+        }
+
+        /// <summary>
+        /// Snapshot the port reference under the connection lock so we don't race with
+        /// Disconnect(). Returns null if the port is not open.
+        /// </summary>
+        private SerialPort? AcquirePort()
+        {
+            lock (_lock)
             {
-                Logger.LogVerbose(ModuleName, $"Error sending message to device: {ex.Message}");
-                return false;
+                if (_serialPort?.IsOpen != true)
+                    return null;
+                return _serialPort;
+            }
+        }
+
+        /// <summary>
+        /// Shared exception logging for both Send overloads. Throttles repeated
+        /// port-not-open / timeout errors via <see cref="_sendErrorLogged"/>.
+        /// </summary>
+        private void LogSendException(Exception ex)
+        {
+            // Order matters: ObjectDisposedException derives from InvalidOperationException
+            // so it must be matched first.
+            switch (ex)
+            {
+                case ObjectDisposedException:
+                    // Benign race with Disconnect().
+                    break;
+                case InvalidOperationException:
+                    if (!_sendErrorLogged)
+                    {
+                        Logger.LogError(ModuleName, $"Send Error (port not open): {ex.Message}");
+                        _sendErrorLogged = true;
+                    }
+                    break;
+                case TimeoutException:
+                    if (!_sendErrorLogged)
+                    {
+                        Logger.LogError(ModuleName, $"Send Timeout: {ex.Message}");
+                        _sendErrorLogged = true;
+                    }
+                    break;
+                default:
+                    Logger.LogVerbose(ModuleName, $"Error sending message to device: {ex.Message}");
+                    break;
             }
         }
 

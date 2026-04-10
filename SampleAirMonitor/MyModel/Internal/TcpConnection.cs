@@ -22,6 +22,7 @@ namespace SampleAirMonitor.MyModel.Internal
 
         private readonly CancellationToken _cancellationToken;
         private readonly object _lock = new();
+        private readonly object _writeLock = new();
 
         private TcpClient? _tcpClient;
         private NetworkStream? _networkStream;
@@ -104,39 +105,8 @@ namespace SampleAirMonitor.MyModel.Internal
         /// <returns>True if sent successfully.</returns>
         public bool Send(string data)
         {
-            if (!IsConnected || _networkStream == null)
-            {
-                return false;
-            }
-            //Debug.WriteLine($"AirMonitor: Sending command via TCP: {data}");
-            try
-            {
-                byte[] bytes = Encoding.ASCII.GetBytes(data);
-                _networkStream.WriteAsync(bytes, 0, bytes.Length);
-                return true;
-            }
-            catch (IOException ex)
-            {
-                if (ex.InnerException is SocketException socketEx)
-                {
-                    Logger.LogError(ModuleName, $"Send Socket Error: {socketEx.Message}");
-                }
-                else
-                {
-                    Logger.LogError(ModuleName, $"Send IO Error: {ex.Message}");
-                }
-                return false;
-            }
-            catch (ObjectDisposedException)
-            {
-                Logger.LogError(ModuleName, "Cannot send data: NetworkStream has been disposed.");
-                return false;
-            }
-            catch (Exception ex)
-            {
-                Logger.LogVerbose(ModuleName, $"Error sending message to device: {ex.Message}");
-                return false;
-            }
+            byte[] bytes = Encoding.ASCII.GetBytes(data);
+            return SendBytes(bytes);
         }
 
         /// <summary>
@@ -144,37 +114,56 @@ namespace SampleAirMonitor.MyModel.Internal
         /// </summary>
         public bool Send(byte[] data)
         {
-            if (!IsConnected || _networkStream == null)
+            return SendBytes(data);
+        }
+
+        /// <summary>
+        /// Serialized write path shared by both Send overloads.
+        /// Snapshots the stream reference under the connection lock so we don't race
+        /// with CleanupConnection(). The actual write is serialized on _writeLock so
+        /// concurrent callers (poll timer, user clicks from the WebSocket receive
+        /// loop, etc.) can't interleave writes on the NetworkStream, which does not
+        /// permit concurrent writes.
+        /// </summary>
+        private bool SendBytes(byte[] bytes)
+        {
+            NetworkStream? stream;
+            lock (_lock)
             {
-                return false;
+                if (_tcpClient?.Connected != true || _networkStream == null)
+                    return false;
+                stream = _networkStream;
             }
 
-            try
+            lock (_writeLock)
             {
-                _networkStream.WriteAsync(data, 0, data.Length);
-                return true;
-            }
-            catch (IOException ex)
-            {
-                if (ex.InnerException is SocketException socketEx)
+                try
                 {
-                    Logger.LogError(ModuleName, $"Send Socket Error: {socketEx.Message}");
+                    stream.Write(bytes, 0, bytes.Length);
+                    return true;
                 }
-                else
+                catch (IOException ex)
                 {
-                    Logger.LogError(ModuleName, $"Send IO Error: {ex.Message}");
+                    if (ex.InnerException is SocketException socketEx)
+                    {
+                        Logger.LogError(ModuleName, $"Send Socket Error: {socketEx.Message}");
+                    }
+                    else
+                    {
+                        Logger.LogError(ModuleName, $"Send IO Error: {ex.Message}");
+                    }
+                    return false;
                 }
-                return false;
-            }
-            catch (ObjectDisposedException)
-            {
-                Logger.LogError(ModuleName, "Cannot send data: NetworkStream has been disposed.");
-                return false;
-            }
-            catch (Exception ex)
-            {
-                Logger.LogVerbose(ModuleName, $"Error sending message to device: {ex.Message}");
-                return false;
+                catch (ObjectDisposedException)
+                {
+                    // Benign race with Disconnect()/CleanupConnection().
+                    return false;
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogVerbose(ModuleName, $"Error sending message to device: {ex.Message}");
+                    return false;
+                }
             }
         }
 

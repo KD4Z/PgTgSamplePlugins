@@ -21,6 +21,7 @@ namespace SampleAmpTuner.MyModel.Internal
 
         private readonly CancellationToken _cancellationToken;
         private readonly object _lock = new();
+        private readonly object _writeLock = new();
 
         private SerialPort? _serialPort;
         private string _portName = string.Empty;
@@ -101,42 +102,59 @@ namespace SampleAmpTuner.MyModel.Internal
         /// <returns>True if sent successfully.</returns>
         public bool Send(string data)
         {
-            if (!IsConnected || _serialPort == null)
+            if (!data.StartsWith("$"))
+                data = "$" + data;
+
+            // Snapshot the port reference under the connection lock so we don't race
+            // with Disconnect(). The write is serialized on _writeLock so concurrent
+            // callers (poll timer, user clicks from the WebSocket receive loop, etc.)
+            // can't interleave writes on the SerialPort — SerialPort instance members
+            // are not documented as thread-safe.
+            SerialPort? port;
+            lock (_lock)
             {
-                return false;
+                if (_serialPort?.IsOpen != true)
+                    return false;
+                port = _serialPort;
             }
 
-            try
+            lock (_writeLock)
             {
-                if (!data.StartsWith("$"))
-                    data = "$" + data;
-
-                _serialPort.Write(data);
-                _sendErrorLogged = false;
-                return true;
-            }
-            catch (InvalidOperationException ex)
-            {
-                if (!_sendErrorLogged)
+                try
                 {
-                    Logger.LogError(ModuleName, $"Send Error (port not open): {ex.Message}");
-                    _sendErrorLogged = true;
+                    port.Write(data);
+                    _sendErrorLogged = false;
+                    return true;
                 }
-                return false;
-            }
-            catch (TimeoutException ex)
-            {
-                if (!_sendErrorLogged)
+                catch (ObjectDisposedException)
                 {
-                    Logger.LogError(ModuleName, $"Send Timeout: {ex.Message}");
-                    _sendErrorLogged = true;
+                    // Benign race with Disconnect(). Must precede InvalidOperationException
+                    // because ObjectDisposedException derives from it.
+                    return false;
                 }
-                return false;
-            }
-            catch (Exception ex)
-            {
-                Logger.LogVerbose(ModuleName, $"Error sending message to device: {ex.Message}");
-                return false;
+                catch (InvalidOperationException ex)
+                {
+                    if (!_sendErrorLogged)
+                    {
+                        Logger.LogError(ModuleName, $"Send Error (port not open): {ex.Message}");
+                        _sendErrorLogged = true;
+                    }
+                    return false;
+                }
+                catch (TimeoutException ex)
+                {
+                    if (!_sendErrorLogged)
+                    {
+                        Logger.LogError(ModuleName, $"Send Timeout: {ex.Message}");
+                        _sendErrorLogged = true;
+                    }
+                    return false;
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogVerbose(ModuleName, $"Error sending message to device: {ex.Message}");
+                    return false;
+                }
             }
         }
 
