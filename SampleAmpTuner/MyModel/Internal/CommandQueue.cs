@@ -306,6 +306,10 @@ namespace SampleAmpTuner.MyModel.Internal
             {
                 OnTuningStateChanged(true);
             }
+            else
+            {
+                OnTuningStateChanged(false);
+            }
         }
 
         /// <summary>

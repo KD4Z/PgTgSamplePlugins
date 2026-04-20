@@ -244,6 +244,10 @@ namespace SampleTuner.MyModel.Internal
             {
                 OnTuningStateChanged(true);
             }
+            else
+            {
+                OnTuningStateChanged(false);
+            }
         }
 
         /// <summary>
