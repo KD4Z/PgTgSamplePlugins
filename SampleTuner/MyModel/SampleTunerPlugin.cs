@@ -173,6 +173,15 @@ namespace SampleTuner.MyModel
                 return;
             }
 
+            // Support restart after StopAsync: StopAsync unwired the connection events and
+            // latched _stopped. Re-wire (detach first so a fresh start cannot
+            // double-subscribe) and re-arm the stop latch.
+            _connection.DataReceived -= OnDataReceived;
+            _connection.DataReceived += OnDataReceived;
+            _connection.ConnectionStateChanged -= OnConnectionStateChanged;
+            _connection.ConnectionStateChanged += OnConnectionStateChanged;
+            _stopped = false;
+
             // Start connection first (must be connected before sending init commands)
             await _connection.StartAsync();
 

@@ -78,8 +78,8 @@ namespace SampleAmpTuner.MyModel.Internal
         {
             _connection = connection;
 
-            // Subscribe to DataReceived for initialization handling
-            _connection.DataReceived += OnDataReceived;
+            // DataReceived is subscribed per initialization cycle in InitializeDeviceAsync
+            // (and unsubscribed on completion), so a second wakeup can see responses too.
 
             // Register token to stop timers on cancel and unblock any pending initialization
             _timerRegistration = cancellationToken.Register(() =>
@@ -115,6 +115,21 @@ namespace SampleAmpTuner.MyModel.Internal
         /// <returns>Task that completes when device initialization is done.</returns>
         public async Task StartAsync()
         {
+            // Dispose timers left from a previous start (restart path) before re-creating,
+            // otherwise the old instances leak with their handlers still attached.
+            if (_pollTimer != null)
+            {
+                _pollTimer.Elapsed -= OnPollTimerElapsed;
+                _pollTimer.Stop();
+                _pollTimer.Dispose();
+            }
+            if (_pttWatchdogTimer != null)
+            {
+                _pttWatchdogTimer.Elapsed -= OnPttWatchdogTimerElapsed;
+                _pttWatchdogTimer.Stop();
+                _pttWatchdogTimer.Dispose();
+            }
+
             _pollTimer = new Timer { Interval = _pollingRxMs };
             _pollTimer.Elapsed += OnPollTimerElapsed;
 
@@ -145,6 +160,11 @@ namespace SampleAmpTuner.MyModel.Internal
         /// <returns>Task that completes when device responds.</returns>
         public async Task InitializeDeviceAsync()
         {
+            // Subscribe to DataReceived for this initialization cycle (unsubscribed on
+            // completion). Detach first so a repeated wakeup cannot double-subscribe.
+            _connection.DataReceived -= OnDataReceived;
+            _connection.DataReceived += OnDataReceived;
+
             _isInitialized = false;
             _initializationInProgress = true;
             _initCompletionSource = new TaskCompletionSource<bool>();
@@ -154,7 +174,14 @@ namespace SampleAmpTuner.MyModel.Internal
             _connection.Send(initSequence);
             Logger.LogVerbose(ModuleName, "Sent device initialization sequence, waiting for response");
 
-            // Start timer to retry every 500ms until device responds
+            // Start timer to retry every 500ms until device responds.
+            // Dispose any timer left over from a prior initialization that never completed.
+            if (_initTimer != null)
+            {
+                _initTimer.Elapsed -= OnInitTimerElapsed;
+                _initTimer.Stop();
+                _initTimer.Dispose();
+            }
             _initTimer = new Timer { Interval = InitRetryIntervalMs };
             _initTimer.Elapsed += OnInitTimerElapsed;
             _initTimer.Start();
@@ -165,11 +192,17 @@ namespace SampleAmpTuner.MyModel.Internal
 
         private void OnInitTimerElapsed(object? sender, ElapsedEventArgs e)
         {
-            if (!_initializationInProgress || !_connection.IsConnected)
+            if (!_initializationInProgress)
             {
                 _initTimer?.Stop();
                 return;
             }
+
+            // Not connected yet: skip this tick but leave the timer running so retries
+            // resume once the connection comes up. Stopping here would strand the pending
+            // InitializeDeviceAsync await forever — nothing re-arms the timer.
+            if (!_connection.IsConnected)
+                return;
 
             // Resend wake-up command to initialize device
             _connection.Send(Constants.WakeUpCmd);
