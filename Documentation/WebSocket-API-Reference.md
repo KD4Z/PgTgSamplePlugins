@@ -188,7 +188,9 @@ Sent once on connect and again whenever the meter list changes:
       "name": "AMP_FWD",
       "units": "Watts",
       "min": 0,
-      "max": 1500
+      "max": 1500,
+      "greenMax": 1250,
+      "yellowMax": 1400
     },
     {
       "name": "AMP_RL",
@@ -206,7 +208,9 @@ Sent once on connect and again whenever the meter list changes:
       "name": "TUNER_FWD",
       "units": "Watts",
       "min": 0,
-      "max": 600
+      "max": 600,
+      "greenMax": 400,
+      "yellowMax": 500
     },
     {
       "name": "TUNER_RL",
@@ -235,6 +239,19 @@ Sent once on connect and again whenever the meter list changes:
 | `AMP_TEMP` | C | Amplifier temperature (Celsius) | From meter list |
 | `TUNER_FWD` | Watts | Tuner forward power | Plugin-defined (KAT500: 600W) |
 | `TUNER_RL` | SWR | Tuner SWR | From meter list |
+
+**Entry fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Meter identifier (see table above) |
+| `units` | string | `Watts`, `SWR`, or `C` |
+| `min` | number | Bottom of the display scale |
+| `max` | number | Top of the display scale |
+| `greenMax` | number | *(Optional, forward-power bars only.)* Inclusive upper bound in Watts of the green colour band. Values ≤ `greenMax` render green, values ≤ `yellowMax` render yellow, above render red. Present only when the source plugin declares fixed bands (e.g. KPA500, KPA1500). Omitted or `0` → the client colours the bar by percentage of full scale (green < 50 %, yellow 50–80 %, red ≥ 80 %). |
+| `yellowMax` | number | *(Optional, forward-power bars only.)* Inclusive upper bound in Watts of the yellow band. Meaningful only when `greenMax` is non-zero. |
+
+> **Note:** `greenMax`/`yellowMax` affect **bar colour only**, never bar length (which is always `(value − min) / (max − min)`). They apply to forward-power (`Watts`) bars only; `SWR` and `C` bars use their own fixed thresholds. Clients that don't recognise these fields can safely ignore them and fall back to percentage colouring.
 
 ### Meter Data
 
